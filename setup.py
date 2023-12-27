@@ -1,6 +1,5 @@
 import cv2
 from datetime import datetime
-import glob
 import v4l2py
 from v4l2py.device import BufferType, PixelFormat
 import re
