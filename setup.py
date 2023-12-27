@@ -1,7 +1,7 @@
 import cv2
 from datetime import datetime
 import v4l2py
-from v4l2py.device import BufferType, PixelFormat
+from v4l2py.device import PixelFormat
 import re
 from os import path, mkdir
 
@@ -21,7 +21,6 @@ def get_device_name(v4l2Node: str) -> str:
             return "UNKNOWN DEVICE"
         else:
             return cam.info.card
-
 
 
 def get_connected_devices():
@@ -139,8 +138,6 @@ def draw_one_frame_from_device(devicePath, resolution):
     print(f"Wrote file {imageFilePath}")
 
     cam.release()
-    cv2.destroyAllWindows()
-
 
 
 if __name__ == "__main__":
