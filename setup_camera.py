@@ -4,6 +4,7 @@ import v4l2py
 from v4l2py.device import PixelFormat
 import re
 from os import path, mkdir
+import user_pref
 
 
 V4L2_DEVICE_PATTERN = r"^\/dev\/(video\d+)$"
@@ -25,8 +26,13 @@ def get_device_name(v4l2Node: str) -> str:
 
 def get_connected_devices():
     connectedDevices = []
+    ignoredNodes = user_pref.read_ignored_nodes();
+    print(ignoredNodes)
     for device in v4l2py.iter_video_capture_devices():
         deviceNode = str(device.filename)
+        if deviceNode in ignoredNodes:
+            continue
+
         deviceName = get_device_name(deviceNode)
         connectedDevices.append((deviceNode, deviceName))
 
