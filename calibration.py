@@ -12,6 +12,8 @@ import numpy as np
 import sys
 import threading
 import user_pref
+from v4l2py.device import Device, BufferType
+from turbojpeg import TurboJPEG, TJFLAG_FASTUPSAMPLE, TJFLAG_FASTDCT
 
 IMG_OUTPUT_PATH = "/tmp"
 DEFAULT_RECORDING_WAIT_TIME_S = 10
@@ -20,38 +22,33 @@ def _capture_frame(waitTimeSec = DEFAULT_RECORDING_WAIT_TIME_S):
     device, resolution = user_pref.read_device_prefs()
     print(device, resolution)
 
-    cam = cv2.VideoCapture(device, cv2.CAP_V4L2)
-    if not cam.isOpened():
-        print(f"ERROR: Could not open {device} to capture images. "
-              "Run setup.py again and make sure an image could be captured.")
-        exit(1)
+    with Device(device) as cam:
+        cam.set_format(BufferType.VIDEO_CAPTURE, resolution[0], resolution[1], "MJPG")
+        cam.set_fps(BufferType.VIDEO_CAPTURE, 30)
+        cam.controls.auto_exposure.value = 1
+        cam.controls.exposure_time_absolute.value = 50
+        cam.controls.brightness.value = 0
+        cam.controls.saturation.value = 60
+        jpegDecoder = TurboJPEG()
 
-    cam.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
-    cam.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
-    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
+        print(f"Running camera stream for ~{waitTimeSec}s before capturing "
+                "frame")
 
-    print(f"Running camera stream for ~{waitTimeSec}s before capturing "
-          "frame")
-
-    start_time = perf_counter()
-    diff = perf_counter() - start_time
-    prev_diff = floor(diff)
-    while diff < waitTimeSec:
-        cam.grab() # Just grab frame. No need to decode it.
-                   # We're just dropping them anyway.
-        if floor(diff) != prev_diff:
-            prev_diff = floor(diff)
-            print(f"{prev_diff}", end="..", flush=True)
+        start_time = perf_counter()
         diff = perf_counter() - start_time
-    print()
-    print("Capturing frame.")
-    ret, frame = cam.read()
-    if not ret:
-        print(f"ERROR: Failed to get image from {device}. "
-            "Please choose another device and try again.")
-        exit(1)
+        prev_diff = floor(diff)
+        for f in cam:
+            jpegFrame = f
+            if floor(diff) != prev_diff:
+                prev_diff = floor(diff)
+                print(f"{prev_diff}", end="..", flush=True)
+            diff = perf_counter() - start_time
+            if diff >= waitTimeSec:
+                break
+        print()
+        print("Capturing frame.")
+        frame = jpegDecoder.decode(bytes(jpegFrame), flags=TJFLAG_FASTUPSAMPLE|TJFLAG_FASTDCT)
 
-    cam.release()
     return frame
 
 
@@ -86,7 +83,7 @@ def display_calibrated_frame():
     rightY = [c[1] for c in controlPoints["right"]]
     rightSpline = CubicSpline(rightY, rightX)
 
-    frame = _capture_frame(waitTimeSec=1)
+    frame = _capture_frame(waitTimeSec=5)
 
     topXs = [x for x in range(topX[0], topX[-1])]
     topYs = np.rint(topSpline(topXs)).astype(np.int32)
@@ -293,7 +290,7 @@ def get_led_information_from_user():
 
     ledInfo = {
         "pin": drivingPin,
-        "numLeds": stripSizes,
+        "counts": stripSizes,
         "order": stripOrder,
         "orientation": stripOrientation
     }

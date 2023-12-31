@@ -28,7 +28,7 @@ def read_ignored_nodes():
     return ignoredNodes
 
 
-def read_device(configPath):
+def _read_device(configPath):
     devicePrefPath = path.join(configPath, DEVICE_FILE)
     if not path.exists(devicePrefPath):
         print(f"ERROR: {devicePrefPath} does not exist. Run setup.py first!")
@@ -55,7 +55,7 @@ def read_device(configPath):
         return device
 
 
-def read_resolution(configPath):
+def _read_resolution(configPath):
     resolutionPrefPath = path.join(configPath, RESOLUTION_FILE)
     if not path.exists(resolutionPrefPath):
         print(f"ERROR: {resolutionPrefPath} does not exist. Run setup.py first!")
@@ -80,8 +80,8 @@ def read_device_prefs():
         print(f"ERROR: {configPath} does not exist. Run setup.py first!")
         exit(1)
 
-    device = read_device(configPath)
-    resolution = read_resolution(configPath)
+    device = _read_device(configPath)
+    resolution = _read_resolution(configPath)
     return (device, resolution)
 
 
@@ -93,7 +93,7 @@ def read_calibration_data():
 
     calibrationFilePath = path.join(configPath, CALIBRATION_FILE)
     if not path.exists(calibrationFilePath):
-        print(f"ERROR: {configPath} does not exist. Please populate "
+        print(f"ERROR: {calibrationFilePath} does not exist. Please populate "
               f"{CALIBRATION_FILE} from the calibration frame.")
         exit(1)
 
@@ -145,3 +145,35 @@ def read_calibration_data():
         "left": leftControlPoints,
         "right": rightControlPoints
     }
+
+def read_led_counts():
+    configPath = path.join(path.dirname(__file__), CONFIG_PATH)
+    if not path.exists(configPath):
+        print(f"ERROR: {configPath} does not exist. Run setup.py first!")
+        exit(1)
+
+    ledInfoFilePath = path.join(configPath, LED_INFO_FILE)
+    if not path.exists(ledInfoFilePath):
+        print(f"ERROR: {ledInfoFilePath} does not exist. Run setup.py first!")
+        exit(1)
+
+    with open(ledInfoFilePath, "r") as ledInfoFile:
+        rawJson = json.load(ledInfoFile)
+
+    return rawJson["counts"]
+
+def read_led_info():
+    configPath = path.join(path.dirname(__file__), CONFIG_PATH)
+    if not path.exists(configPath):
+        print(f"ERROR: {configPath} does not exist. Run setup.py first!")
+        exit(1)
+
+    ledInfoFilePath = path.join(configPath, LED_INFO_FILE)
+    if not path.exists(ledInfoFilePath):
+        print(f"ERROR: {ledInfoFilePath} does not exist. Run setup.py first!")
+        exit(1)
+
+    with open(ledInfoFilePath, "r") as ledInfoFile:
+        rawJson = json.load(ledInfoFile)
+
+    return rawJson
