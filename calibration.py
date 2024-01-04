@@ -34,7 +34,7 @@ def _capture_frame(waitTimeSec = DEFAULT_RECORDING_WAIT_TIME_S):
         cam.controls.auto_exposure.value = 1
         cam.controls.brightness.value = 0
         cam.controls.saturation.value = 60
-        cam.controls.exposure_time_absolute.value = 157
+        cam.controls.exposure_time_absolute.value = 100
         jpegDecoder = TurboJPEG()
 
         print(f"Running camera stream for ~{waitTimeSec}s before capturing "

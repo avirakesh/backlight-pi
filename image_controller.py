@@ -160,5 +160,5 @@ class ImageController:
         self._cam.controls.auto_exposure.value = 1
         self._cam.controls.brightness.value = 0
         self._cam.controls.saturation.value = 60
-        self._cam.controls.exposure_time_absolute.value = 157
+        self._cam.controls.exposure_time_absolute.value = 100
         self.jpegDecoder = TurboJPEG()
