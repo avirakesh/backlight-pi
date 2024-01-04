@@ -40,7 +40,7 @@ sampled to set the color of the backlight.
 
 These points must be written to `config/calibration.json` before continuing.
 The anatomy of `calibration.json` is as follows:
-```json
+```javascript
 // NOTE: Comments for documentation only. JSON does not allow comments.
 {
     "top": [
