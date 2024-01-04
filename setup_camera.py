@@ -1,10 +1,10 @@
-import cv2
 from datetime import datetime
-import v4l2py
-from v4l2py.device import PixelFormat
-import re
 from os import path, mkdir
+from v4l2py.device import PixelFormat
+import cv2
+import re
 import user_pref
+import v4l2py
 
 
 V4L2_DEVICE_PATTERN = r"^\/dev\/(video\d+)$"

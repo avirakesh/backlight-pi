@@ -1,14 +1,12 @@
-from multiprocessing import Process, Queue, Value
-from pin_to_pin import AVAILABLE_PINS
-from neopixel import NeoPixel
-import user_pref
-import queue
-import numpy as np
 from matplotlib.colors import rgb_to_hsv, hsv_to_rgb
+from multiprocessing import Process, Queue, Value
+from neopixel import NeoPixel
+from pin_to_pin import AVAILABLE_PINS
 from time import perf_counter
-import copy
 import digitalio
-import board
+import numpy as np
+import queue
+import user_pref
 
 QUEUE_WAIT_TIMEOUT_S = 0.1
 MAJOR_CHANGE_SAMPLE_TIME_S = 1

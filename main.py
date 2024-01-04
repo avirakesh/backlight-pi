@@ -1,4 +1,3 @@
-import user_pref
 from image_controller import ImageController
 from led_controller import LEDInterface
 

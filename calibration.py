@@ -4,7 +4,8 @@ from os import path
 from pin_to_pin import AVAILABLE_PINS
 from scipy.interpolate import CubicSpline
 from time import perf_counter, sleep
-import board
+from turbojpeg import TurboJPEG, TJFLAG_FASTUPSAMPLE, TJFLAG_FASTDCT
+from v4l2py.device import Device, BufferType
 import cv2
 import json
 import neopixel
@@ -12,8 +13,6 @@ import numpy as np
 import sys
 import threading
 import user_pref
-from v4l2py.device import Device, BufferType
-from turbojpeg import TurboJPEG, TJFLAG_FASTUPSAMPLE, TJFLAG_FASTDCT
 
 IMG_OUTPUT_PATH = "/tmp"
 DEFAULT_RECORDING_WAIT_TIME_S = 10

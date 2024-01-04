@@ -1,13 +1,12 @@
+from led_controller import LEDInterface
+from turbojpeg import TurboJPEG, TJFLAG_FASTDCT, TJFLAG_FASTUPSAMPLE, TJPF_RGB
 from utils import get_led_sample_points
-from time import sleep, perf_counter
-import user_pref
-import cv2
-import numpy as np
 from v4l2py import Device
 from v4l2py.device import BufferType
-from turbojpeg import TurboJPEG, TJFLAG_FASTDCT, TJFLAG_FASTUPSAMPLE, TJPF_RGB
-from led_controller import LEDInterface
+import cv2
+import numpy as np
 import queue, threading
+import user_pref
 
 
 class ImageController:
