@@ -4,15 +4,16 @@ from neopixel import NeoPixel
 import user_pref
 import queue
 import numpy as np
-import colorsys
 from matplotlib.colors import rgb_to_hsv, hsv_to_rgb
 from time import perf_counter
 import copy
+import digitalio
+import board
 
 QUEUE_WAIT_TIMEOUT_S = 0.1
 MAJOR_CHANGE_SAMPLE_TIME_S = 1
 SHUTOFF_TIMEOUT_S = 3 * 60
-LERP_PARAMETER = 0.3
+LERP_PARAMETER = 0.5
 MAJOR_CHANGE_DELTA = 0.45
 SHUTOFF_DEBOUCE_TIME_S = 10
 
@@ -27,7 +28,6 @@ class LEDController:
         self._setup_leds()
         self._isOff = False
         self._shutoff = False
-        self._shutoffTime = 0
         # Stored in HSV
         self._prevColors = {
             "top": [[0, 0, 0] for _ in range(0, len(self._ledIndices["top"]))],
@@ -35,15 +35,6 @@ class LEDController:
             "left": [[0, 0, 0] for _ in range(0, len(self._ledIndices["left"]))],
             "right": [[0, 0, 0] for _ in range(0, len(self._ledIndices["right"]))],
         }
-
-        self._lastMajorColor = {
-            "top": [[0, 0, 0] for _ in range(0, len(self._ledIndices["top"]))],
-            "bottom": [[0, 0, 0] for _ in range(0, len(self._ledIndices["bottom"]))],
-            "left": [[0, 0, 0] for _ in range(0, len(self._ledIndices["left"]))],
-            "right": [[0, 0, 0] for _ in range(0, len(self._ledIndices["right"]))],
-        }
-        self._lastMajorSampleTs = 0
-        self._lastMajorChangeTs = perf_counter()
 
         while self._shouldExit.value == 0:
             self._process_colors()
@@ -56,7 +47,6 @@ class LEDController:
             imgColors = self._colorQueue.get(block=True,
                                              timeout=QUEUE_WAIT_TIMEOUT_S)
 
-            diffs = []
             for side, imgColor in imgColors.items():
                 imgHsv = rgb_to_hsv(np.divide(imgColor, 255))
                 prevHsv = self._prevColors[side]
@@ -76,37 +66,19 @@ class LEDController:
                         self._leds[ledIdx] = [0, 0, 0]
             self._leds.show()
             self._isOff = self._shutoff
-            # print(np.max(diffs))
 
         except queue.Empty:
             # Empty Queue, do nothing.
             pass
 
     def _signal_shutoff_if_needed(self):
-        if perf_counter() - self._lastMajorSampleTs >= MAJOR_CHANGE_SAMPLE_TIME_S:
-                self._lastMajorSampleTs = perf_counter()
-                diffs = []
-
-                for side, currColor in self._prevColors.items():
-                    lastMajorColor = self._lastMajorColor[side]
-                    diff = np.subtract(currColor, lastMajorColor)
-                    diffs.append(np.max(np.abs(diff)))
-                maxDiff = np.max(diffs)
-
-                if maxDiff >= MAJOR_CHANGE_DELTA:
-                    # print(maxDiff)
-                    self._lastMajorColor = copy.deepcopy(self._prevColors)
-                    self._lastMajorChangeTs = perf_counter()
-                    if perf_counter() - self._shutoffTime >= SHUTOFF_DEBOUCE_TIME_S:
-                        self._shutoff = False
-                elif not self._shutoff and perf_counter() - self._lastMajorChangeTs >= SHUTOFF_TIMEOUT_S:
-                    self._shutoff = True
-                    self._shutoffTime = perf_counter()
+        self._shutoff = not self._onOffSwitch.value
 
 
     def _read_user_prefs(self):
         ledConfig = user_pref.read_led_info()
-        self._pin = AVAILABLE_PINS[ledConfig["pin"]]
+        self._controlPin = AVAILABLE_PINS[ledConfig["pin"]]
+        self._powerPin = AVAILABLE_PINS[ledConfig["power_pin"]]
 
         order = ledConfig["order"]
         counts = ledConfig["counts"]
@@ -127,7 +99,9 @@ class LEDController:
 
 
     def _setup_leds(self):
-        self._leds = NeoPixel(self._pin, self._numLeds, auto_write=False, brightness=0.5)
+        self._leds = NeoPixel(self._controlPin, self._numLeds, auto_write=False, brightness=0.5)
+        self._onOffSwitch = digitalio.DigitalInOut(self._powerPin)
+        self._onOffSwitch.direction = digitalio.Direction.INPUT
 
     def _teardown_leds(self):
         self._leds.deinit()

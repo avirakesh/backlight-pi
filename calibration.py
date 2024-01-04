@@ -26,9 +26,9 @@ def _capture_frame(waitTimeSec = DEFAULT_RECORDING_WAIT_TIME_S):
         cam.set_format(BufferType.VIDEO_CAPTURE, resolution[0], resolution[1], "MJPG")
         cam.set_fps(BufferType.VIDEO_CAPTURE, 30)
         cam.controls.auto_exposure.value = 1
-        cam.controls.exposure_time_absolute.value = 50
         cam.controls.brightness.value = 0
         cam.controls.saturation.value = 60
+        cam.controls.exposure_time_absolute.value = 157
         jpegDecoder = TurboJPEG()
 
         print(f"Running camera stream for ~{waitTimeSec}s before capturing "
@@ -288,11 +288,15 @@ def get_led_information_from_user():
                                                        stripSizes)
     print()
 
+    powerPin = get_int_from_user("Pin to turn LEDs on and off",
+                                    lambda x: x in AVAILABLE_PINS.keys())
+
     ledInfo = {
         "pin": drivingPin,
         "counts": stripSizes,
         "order": stripOrder,
-        "orientation": stripOrientation
+        "orientation": stripOrientation,
+        "power_pin": powerPin
     }
 
     configPath = path.join(user_pref.CONFIG_PATH)
@@ -310,6 +314,7 @@ def run_full_calibration():
         capture_frame_for_calibration()
         calibrationPath = path.join(user_pref.CONFIG_PATH,
                                     user_pref.CALIBRATION_FILE)
+        print()
         input(f"Please fill out {calibrationPath} and press any key.")
         calibrationPath = path.join(user_pref.CONFIG_PATH,
                                     user_pref.CALIBRATION_FILE)
@@ -317,6 +322,7 @@ def run_full_calibration():
             print(f"{calibrationPath} does not exist. Retrying.")
             print()
             continue
+        print()
         display_calibrated_frame()
         print("Does the calibration frame look right?")
         userInput = get_str_from_user("'y' to continue, 'n' to retry",

@@ -151,7 +151,7 @@ class ImageController:
         self._cam.open()
         self._cam.set_format(BufferType.VIDEO_CAPTURE, resolution[0], resolution[1], "MJPG")
         self._cam.controls.auto_exposure.value = 1
-        self._cam.controls.exposure_time_absolute.value = 50
         self._cam.controls.brightness.value = 0
         self._cam.controls.saturation.value = 60
+        self._cam.controls.exposure_time_absolute.value = 157
         self.jpegDecoder = TurboJPEG()
