@@ -3,7 +3,7 @@
 A simple program to add dymanic backlight to any screen.
 
 <img src="./docs/imgs/in-action.jpg" alt="backlight-pi in action"
-    width=25% height=25% />
+    width=50% height=50% />
 
 My setup uses a generic ultrawide USB camera from Amazon, an individually
 adressable LED strip with WS2812B, and a Raspberry Pi Zero 2W.
@@ -179,7 +179,7 @@ and watch your LEDs come to life!
              /dev/media3
      ```
      In this case, `bcm2835-codec-decode` and `bcm2835-isp` are non-camera V4L2
-     nodes mounted to the system.
+     nodes mounted to the system that may cause the crash.
 
   2. Create a file `config/ignored_nodes.txt` and put all spurious V4L2 nodes
      there. For an output like above, `ignored_nodes.txt` will look something
