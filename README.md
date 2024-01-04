@@ -5,8 +5,7 @@ A simple program to add dymanic backlight to any screen.
 <img src="./docs/imgs/in-action.jpg" alt="backlight-pi in action"
     width=50% height=50% />
 
-My setup uses a generic ultrawide USB camera from Amazon, an individually
-adressable LED strip with WS2812B, and a Raspberry Pi Zero 2W.
+\[Not sure why my camera captures orange as almost purple, but c'est la vie.\]
 
 ## Setting Up
 
@@ -17,6 +16,9 @@ For this script to work, you'll need:
 2. An LED strip with WS2812B long enough to cover all 4 sides of your monitor.
 3. A generic USB camera that the Raspberry can access via V4L2.
 4. A TTP223 based capacitive sensor in "Self Lock / Low Output Mode".
+
+All ingredients can be freely sub-ed for other more convenient options, but OOB
+experience may be degraded.
 
 ### 1. Set up the LED Strip
 This won't go into details of how to put an LED strip behind your monitor
@@ -142,8 +144,8 @@ $ sudo -E python main.py
 and watch your LEDs come to life!
 
 ## Known Issues
-- `OSError: [Errno 25] Inappropriate ioctl for device` when running
-  `setup_devices.py`.
+- **`OSError: [Errno 25] Inappropriate ioctl for device` when running
+  `setup_devices.py`.**
 
   This happens when there are V4L2 nodes that don't correspond to USB Cameras
   and cannot be filtered by V4L2Py. It is not clear why V4L2Py cannot filter
@@ -201,3 +203,12 @@ and watch your LEDs come to life!
      ```
      Note that there is no need to put `/dev/media*` files in
      `ignored_nodes.txt`.
+
+- **LEDs are always white**:
+
+  This can happen if the auto exposure algorithm starts acting up and tries
+  to expose a darker part of the scene. The bright screen will get saturated and
+  show up completely white.
+
+  To fix this issue use manual exposure time. See `_setup_camera` function in
+  `image_controller.py` for an example.

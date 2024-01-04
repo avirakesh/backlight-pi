@@ -159,7 +159,7 @@ Third Strip [bottom|right]: bottom
 Assuming fourth strip is 'right'.
 ```
 Because LED strips on all sides are connected in series, this step tells
-backlight-pi how the order going from closet to the driving pin to the
+backlight-pi the order going from closet to the driving pin to the
 furthest. We will try to light up the corresponding strips in the next step.
 
 #### LED strip orientation:
@@ -193,7 +193,8 @@ is connected.
 
 Technically, the LED strips will be turned off any time this pin is pulled down,
 and will be turned on any time this pin is pulled up. So the TTP223 sensor can
-be replaced with a toggle switch to pull the pin up or down.
+be replaced with a toggle switch (or anything else) that pulls the pin up and
+down.
 
 ## 4. Fin.
 ```
