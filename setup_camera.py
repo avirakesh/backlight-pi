@@ -27,7 +27,6 @@ def get_device_name(v4l2Node: str) -> str:
 def get_connected_devices():
     connectedDevices = []
     ignoredNodes = user_pref.read_ignored_nodes();
-    print(ignoredNodes)
     for device in v4l2py.iter_video_capture_devices():
         deviceNode = str(device.filename)
         if deviceNode in ignoredNodes:
