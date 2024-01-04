@@ -321,7 +321,7 @@ def run_full_calibration():
         calibrationPath = path.join(user_pref.CONFIG_PATH,
                                     user_pref.CALIBRATION_FILE)
         print()
-        input(f"Please fill out {calibrationPath} and press any key.")
+        input(f"Please fill out {calibrationPath} and press Enter.")
         calibrationPath = path.join(user_pref.CONFIG_PATH,
                                     user_pref.CALIBRATION_FILE)
         if not path.exists(calibrationPath):
