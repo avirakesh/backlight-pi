@@ -26,6 +26,13 @@ def _capture_frame(waitTimeSec = DEFAULT_RECORDING_WAIT_TIME_S):
         cam.set_format(BufferType.VIDEO_CAPTURE, resolution[0], resolution[1], "MJPG")
         cam.set_fps(BufferType.VIDEO_CAPTURE, 30)
         cam.controls.auto_exposure.value = 1
+        # reopen device to ensure that auto_exposure_value is reflected when
+        # setting exposure_time_absolute value
+
+    with Device(device) as cam:
+        cam.set_format(BufferType.VIDEO_CAPTURE, resolution[0], resolution[1], "MJPG")
+        cam.set_fps(BufferType.VIDEO_CAPTURE, 30)
+        cam.controls.auto_exposure.value = 1
         cam.controls.brightness.value = 0
         cam.controls.saturation.value = 60
         cam.controls.exposure_time_absolute.value = 157
