@@ -119,27 +119,20 @@ class ImageController:
         controlPoints = user_pref.read_calibration_data()
         pointCounts = user_pref.read_led_counts()
 
-        topPoints = get_led_sample_points(controlPoints["top"],
-                                          pointCounts["top"],
-                                          independentAxis="x")
+        sampledPoints = get_led_sample_points(controlPoints, pointCounts)
+        topPoints = sampledPoints["top"]
         self._topIdx = [[v[1], v[0]] for v in topPoints]
         self._topIdx = np.transpose(self._topIdx)
 
-        bottomPoints = get_led_sample_points(controlPoints["bottom"],
-                                             pointCounts["bottom"],
-                                             independentAxis="x")
+        bottomPoints = sampledPoints["bottom"]
         self._bottomIdx = [[v[1], v[0]] for v in bottomPoints]
         self._bottomIdx = np.transpose(self._bottomIdx)
 
-        leftPoints = get_led_sample_points(controlPoints["left"],
-                                           pointCounts["left"],
-                                           independentAxis="y")
+        leftPoints = sampledPoints["left"]
         self._leftIdx = [[v[1], v[0]] for v in leftPoints]
         self._leftIdx = np.transpose(self._leftIdx)
 
-        rightPoints = get_led_sample_points(controlPoints["right"],
-                                            pointCounts["right"],
-                                            independentAxis="y")
+        rightPoints = sampledPoints["right"]
         self._rightIdx = [[v[1], v[0]] for v in rightPoints]
         self._rightIdx = np.transpose(self._rightIdx)
 
