@@ -2,6 +2,8 @@ from scipy.interpolate import CubicSpline
 import numpy as np
 import math
 
+SIDE_LENGTH_DISCOUNT_FACTOR = 0.7
+
 def get_led_sample_points(controlPoints, numLeds):
     topPoints = controlPoints["top"]
     topXs = [v[0] for v in topPoints]
@@ -112,6 +114,11 @@ def _horizontal_segment_lengths(totalLength, leftLength,
         for unused in range(numSegments):
             yield segmentLength
         return
+
+    if leftLength > rightLength:
+        leftLength *= SIDE_LENGTH_DISCOUNT_FACTOR
+    else:
+        rightLength *= SIDE_LENGTH_DISCOUNT_FACTOR
 
     n = numSegments
     r = leftLength / rightLength
