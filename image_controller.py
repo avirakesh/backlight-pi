@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 import queue, threading
 import user_pref
+from copy import deepcopy
 
 
 class ImageController:
@@ -63,7 +64,7 @@ class ImageController:
                 self._frameQueue.get_nowait()
             except queue.Empty:
                 pass
-            self._frameQueue.put(frame)
+            self._frameQueue.put(deepcopy(frame))
 
 
     def _process_one_frame(self, frame):
