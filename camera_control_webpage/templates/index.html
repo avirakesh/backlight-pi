@@ -1,0 +1,63 @@
+<html>
+    <head>
+        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/index.css') }}">
+        <script src="{{ url_for('static',filename='scripts/index.js') }}"></script>
+        <title> Webcam Control Webpage </title>
+    </head>
+
+    <body>
+        <div class="body_div">
+            <div class="frame_container">
+                <img src="/camera_feed" class="frame_img">
+            </div>
+            <div class="form_div">
+                <form class="slider_form">
+                    <label for="brightness">brightness</label>
+                    <input type="range" id="brightness">
+                    <output id="brightness_value" for="brightness"></output>
+                    <button type="button" id="brightness_reset">Reset</button>
+                    <br>
+                    <label for="contrast">contrast</label>
+                    <input type="range" id="contrast">
+                    <output id="contrast_value" for="contrast"></output>
+                    <button type="button" id="contrast_reset">Reset</button>
+                    <br>
+                    <label for="saturation">saturation</label>
+                    <input type="range" id="saturation">
+                    <output id="saturation_value" for="saturation"></output>
+                    <button type="button" id="saturation_reset">Reset</button>
+                    <br>
+                    <label for="hue">hue</label>
+                    <input type="range" id="hue">
+                    <output id="hue_value" for="hue"></output>
+                    <button type="button" id="hue_reset">Reset</button>
+                    <br>
+                    <label for="gamma">gamma</label>
+                    <input type="range" id="gamma">
+                    <output id="gamma_value" for="gamma"></output>
+                    <button type="button" id="gamma_reset">Reset</button>
+                    <br>
+                    <label for="gain">gain</label>
+                    <input type="range" id="gain">
+                    <output id="gain_value" for="gain"></output>
+                    <button type="button" id="gain_reset">Reset</button>
+                    <br>
+                    <label for="white_balance_temperature">white_balance_temperature</label>
+                    <input type="range" id="white_balance_temperature">
+                    <output id="white_balance_temperature_value" for="white_balance_temperature"></output>
+                    <button type="button" id="white_balance_temperature_reset">Reset</button>
+                    <br>
+                    <label for="sharpness">sharpness</label>
+                    <input type="range" id="sharpness">
+                    <output id="sharpness_value" for="sharpness"></output>
+                    <button type="button" id="sharpness_reset">Reset</button>
+                    <br>
+                    <label for="exposure_time_absolute">exposure_time_absolute</label>
+                    <input type="range" id="exposure_time_absolute">
+                    <output id="exposure_time_absolute_value" for="exposure_time_absolute"></output>
+                    <button type="button" id="exposure_time_absolute_reset">Reset</button>
+                </form>
+            </div>
+        </div>
+    </body>
+</html>
