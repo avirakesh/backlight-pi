@@ -41,7 +41,7 @@ class ImageController:
         self._cameraThread.start()
         while not self._stopThread.is_set():
             frame = self._frameQueue.get()
-            rgbFrame = self.jpegDecoder.decode(bytes(frame),
+            rgbFrame = self.jpegDecoder.decode(frame,
                                                pixel_format=TJPF_RGB,
                                                flags=TJFLAG_FASTUPSAMPLE|TJFLAG_FASTDCT)
             self._process_one_frame(rgbFrame)
@@ -64,7 +64,7 @@ class ImageController:
                 self._frameQueue.get_nowait()
             except queue.Empty:
                 pass
-            self._frameQueue.put(deepcopy(frame))
+            self._frameQueue.put(deepcopy(bytes(frame)))
 
 
     def _process_one_frame(self, frame):
