@@ -25,7 +25,7 @@ def _capture_frame(waitTimeSec = DEFAULT_RECORDING_WAIT_TIME_S):
         cam.set_format(BufferType.VIDEO_CAPTURE, resolution[0], resolution[1], "MJPG")
         cam.set_fps(BufferType.VIDEO_CAPTURE, 30)
         cam.controls.auto_exposure.value = 1
-        cam.controls.white_balance_automatic = False
+        cam.controls.white_balance_automatic.value = False
         # reopen device to ensure that auto_exposure_value is reflected when
         # setting exposure_time_absolute value
 
@@ -33,10 +33,11 @@ def _capture_frame(waitTimeSec = DEFAULT_RECORDING_WAIT_TIME_S):
         cam.set_format(BufferType.VIDEO_CAPTURE, resolution[0], resolution[1], "MJPG")
         cam.set_fps(BufferType.VIDEO_CAPTURE, 30)
         cam.controls.auto_exposure.value = 1
+        cam.controls.white_balance_automatic.value = False
         cam.controls.brightness.value = 0
-        cam.controls.white_balance_automatic = False
-        cam.controls.saturation.value = 60
-        cam.controls.exposure_time_absolute.value = 100
+        cam.controls.saturation.value = 80
+        cam.controls.exposure_time_absolute.value = 110
+        cam.controls.white_balance_temperature.value = 4600
         jpegDecoder = TurboJPEG()
 
         print(f"Running camera stream for ~{waitTimeSec}s before capturing "
