@@ -41,10 +41,14 @@ class ImageController:
         self._cameraThread.start()
         while not self._stopThread.is_set():
             frame = self._frameQueue.get()
-            rgbFrame = self.jpegDecoder.decode(frame,
-                                               pixel_format=TJPF_RGB,
-                                               flags=TJFLAG_FASTUPSAMPLE|TJFLAG_FASTDCT)
-            self._process_one_frame(rgbFrame)
+            try:
+                rgbFrame = self.jpegDecoder.decode(frame,
+                                                pixel_format=TJPF_RGB,
+                                                flags=TJFLAG_FASTUPSAMPLE|TJFLAG_FASTDCT)
+                self._process_one_frame(rgbFrame)
+            except OSError as e:
+                print("WARN: OSError while decoding JPEG. Skipping.")
+                print(e)
             # self.num_frames_processed += 1
             # if self.num_frames_processed % 10 == 0:
             #     fps = self.num_frames_processed / (perf_counter() - self.start_timer)
