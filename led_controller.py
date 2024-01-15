@@ -1,8 +1,9 @@
+from adafruit_debouncer import Debouncer
 from matplotlib.colors import rgb_to_hsv, hsv_to_rgb
 from multiprocessing import Process, Queue, Value
 from neopixel import NeoPixel
 from pin_to_pin import AVAILABLE_PINS
-from time import perf_counter
+from time import sleep
 import digitalio
 import numpy as np
 import queue
@@ -16,9 +17,11 @@ MAJOR_CHANGE_DELTA = 0.45
 SHUTOFF_DEBOUCE_TIME_S = 10
 
 class LEDController:
-    def __init__(self, shouldExit: Value, colorQueue: Queue):
+    def __init__(self, shouldExit: Value, colorQueue: Queue, power: Value):
         self._colorQueue = colorQueue
         self._shouldExit = shouldExit
+        self._power = power
+
 
     def run(self):
         print("Starting LED Controller Process...")
@@ -35,10 +38,11 @@ class LEDController:
         }
 
         while self._shouldExit.value == 0:
+            self._shutoff = not self._power.value
             self._process_colors()
-            self._signal_shutoff_if_needed()
 
         self._teardown_leds()
+
 
     def _process_colors(self):
         try:
@@ -55,22 +59,22 @@ class LEDController:
                 newRgb = np.rint(np.multiply(hsv_to_rgb(newHsv), 255)).astype(np.uint8)
                 self._prevColors[side] = newHsv
 
-                if not self._shutoff:
-                    self._isOff = False
+                if not self._isOff:
                     for colorIdx, ledIdx in enumerate(self._ledIndices[side]):
                         self._leds[ledIdx] = newRgb[colorIdx]
-                elif not self._isOff:
-                    for ledIdx in self._ledIndices[side]:
-                        self._leds[ledIdx] = [0, 0, 0]
+
             self._leds.show()
-            self._isOff = self._shutoff
 
         except queue.Empty:
             # Empty Queue, do nothing.
             pass
 
-    def _signal_shutoff_if_needed(self):
-        self._shutoff = not self._onOffSwitch.value
+        if self._shutoff and not self._isOff:
+            for ledIndices in self._ledIndices.values():
+                for ledIdx in ledIndices:
+                    self._leds[ledIdx] = [0, 0, 0]
+            self._leds.show()
+        self._isOff = self._shutoff
 
 
     def _read_user_prefs(self):
@@ -98,28 +102,30 @@ class LEDController:
 
     def _setup_leds(self):
         self._leds = NeoPixel(self._controlPin, self._numLeds, auto_write=False, brightness=0.5)
-        self._onOffSwitch = digitalio.DigitalInOut(self._powerPin)
-        self._onOffSwitch.direction = digitalio.Direction.INPUT
+
 
     def _teardown_leds(self):
         self._leds.deinit()
 
 
-
 class LEDInterface():
     def __init__(self):
         self._shouldExit = Value('b', 0, lock=False)
+        self._power = Value('b', 0, lock=False)
         self._colorQueue = Queue()
 
-        self._ledController = LEDController(self._shouldExit, self._colorQueue)
+        self._ledController = LEDController(self._shouldExit, self._colorQueue, self._power)
 
     def __enter__(self):
+        self._setup_power_pin()
         self._ledControllerProcess = Process(target=LEDController.run,
                                              args=[self._ledController])
         self._ledControllerProcess.start()
+
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self._power.value = False
         self._shouldExit.value = True
         self._ledControllerProcess.join()
         self._colorQueue.close()
@@ -131,3 +137,14 @@ class LEDInterface():
             pass
 
         self._colorQueue.put(colors)
+
+
+    def _setup_power_pin(self):
+        ledConfig = user_pref.read_led_info();
+        self._powerPin = AVAILABLE_PINS[ledConfig["power_pin"]]
+        self._powerPin = digitalio.DigitalInOut(self._powerPin)
+        self._powerPin.direction = digitalio.Direction.INPUT
+
+    def update_and_get_power_state(self):
+        self._power.value = self._powerPin.value
+        return self._powerPin.value

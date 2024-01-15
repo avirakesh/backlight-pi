@@ -1,3 +1,4 @@
+from copy import deepcopy
 from led_controller import LEDInterface
 from turbojpeg import TurboJPEG, TJFLAG_FASTDCT, TJFLAG_FASTUPSAMPLE, TJPF_RGB
 from utils import get_led_sample_points
@@ -7,8 +8,8 @@ import cv2
 import numpy as np
 import queue, threading
 import user_pref
-from copy import deepcopy
 
+FRAME_GET_TIMEOUT_S = 0.1
 
 class ImageController:
     def __init__(self):
@@ -17,17 +18,18 @@ class ImageController:
 
     def __enter__(self):
         self._setup_sample_points()
-        self._setup_camera()
+        self.jpegDecoder = TurboJPEG()
         self._frameQueue = queue.Queue(1)
         self._stopThread = threading.Event()
-        self._cameraThread = threading.Thread(target=ImageController._camera_thread_loop, args=[self])
+        self._cameraThread = None
+        self._frameThread = None
+
+        self._open_camera()
         return self
 
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._stopThread.set()
-        self._cameraThread.join()
-        self._cam.close()
+        self.stop_capture_and_processing()
 
 
     def set_led_interface(self, ledInterface: LEDInterface):
@@ -35,31 +37,47 @@ class ImageController:
 
 
     def start_capture_and_processing(self):
+        self._stopThread.clear()
+        self._cameraThread = threading.Thread(
+                target=ImageController._camera_thread_loop, args=[self])
+        self._cameraThread.start()
+
         # self.start_timer = perf_counter()
         # self.num_frames_processed = 0
-
-        self._cameraThread.start()
-        while not self._stopThread.is_set():
-            frame = self._frameQueue.get()
+        while self._ledInterface.update_and_get_power_state():
             try:
-                rgbFrame = self.jpegDecoder.decode(frame,
-                                                pixel_format=TJPF_RGB,
-                                                flags=TJFLAG_FASTUPSAMPLE|TJFLAG_FASTDCT)
-                self._process_one_frame(rgbFrame)
-            except OSError as e:
-                print("WARN: OSError while decoding JPEG. Skipping.")
-                print(e)
-            # self.num_frames_processed += 1
-            # if self.num_frames_processed % 10 == 0:
-            #     fps = self.num_frames_processed / (perf_counter() - self.start_timer)
-            #     print(f"FPS: {fps}")
+                frame = self._frameQueue.get(timeout=FRAME_GET_TIMEOUT_S)
+                try:
+                    rgbFrame = self.jpegDecoder.decode(frame,
+                                                    pixel_format=TJPF_RGB,
+                                                    flags=TJFLAG_FASTUPSAMPLE|TJFLAG_FASTDCT)
+                    self._process_one_frame(rgbFrame)
+                except OSError as e:
+                    print("WARN: OSError while decoding JPEG. Skipping.")
+                    print(e)
 
-            # if (self.num_frames_processed == 100):
-            #     self.start_timer = perf_counter()
-            #     self.num_frames_processed = 0
+                # self.num_frames_processed += 1
+                # if self.num_frames_processed % 10 == 0:
+                #     fps = self.num_frames_processed / (perf_counter() - self.start_timer)
+                #     print(f"FPS: {fps}")
+
+                # if (self.num_frames_processed == 100):
+                #     self.start_timer = perf_counter()
+                #     self.num_frames_processed = 0
+            except queue.Empty:
+                pass
+
+    def stop_capture_and_processing(self):
+        self._stopThread.set()
+        if self._cameraThread is not None:
+            self._cameraThread.join()
 
 
     def _camera_thread_loop(self):
+        """
+        Immediately consumes the available camera frame. Makes the latest frame
+        available to _frameQueue and drops any previously saved frames.
+        """
         for frame in self._cam:
             if self._stopThread.is_set():
                 break
@@ -142,7 +160,7 @@ class ImageController:
         self._rightIdx = np.transpose(self._rightIdx)
 
 
-    def _setup_camera(self):
+    def _open_camera(self):
         (cameraPath, resolution) = user_pref.read_device_prefs()
         self._cam = Device(cameraPath)
         self._cam.open()
@@ -164,4 +182,3 @@ class ImageController:
         self._cam.controls.gain.value = 0
         self._cam.controls.white_balance_temperature.value = 5000
         self._cam.controls.exposure_time_absolute.value = 128
-        self.jpegDecoder = TurboJPEG()
