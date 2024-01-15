@@ -9,10 +9,14 @@
 }
 
 .frame_container {
-    display: flexbox;
+    display: flex;
     height: 100%;
     flex-grow: 1;
     flex-basis: 75%;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
 }
 
 .frame_img {
