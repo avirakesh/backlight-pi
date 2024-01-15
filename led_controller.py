@@ -51,6 +51,12 @@ class LEDController:
 
             for side, imgColor in imgColors.items():
                 imgHsv = rgb_to_hsv(np.divide(imgColor, 255))
+
+                # Compensate for LED being desaturated by bumping up the
+                # saturation just a little
+                imgHsv[:, 1] = np.multiply(imgHsv[:, 1], 1.3)
+                imgHsv[:, 1] = np.minimum(imgHsv[:, 1], 1) # clips the max value to 1
+
                 prevHsv = self._prevColors[side]
                 newHsv = np.add(
                     np.multiply(prevHsv, 1 - LERP_PARAMETER),

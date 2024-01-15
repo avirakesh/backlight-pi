@@ -35,12 +35,12 @@ def _capture_frame(waitTimeSec = DEFAULT_RECORDING_WAIT_TIME_S):
         cam.controls.auto_exposure.value = 1
         cam.controls.white_balance_automatic.value = False
         cam.controls.brightness.value = 0
-        cam.controls.contrast.value = 32
-        cam.controls.saturation.value = 88
+        cam.controls.contrast.value = 16
+        cam.controls.saturation.value = 60
         cam.controls.hue.value = 0
-        cam.controls.gamma.value = 150
-        cam.controls.gain.value = 0
-        cam.controls.white_balance_temperature.value = 5000
+        cam.controls.gamma.value = 100
+        cam.controls.gain.value = 50
+        cam.controls.white_balance_temperature.value = 4100
         cam.controls.exposure_time_absolute.value = 128
         jpegDecoder = TurboJPEG()
 

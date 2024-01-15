@@ -10,6 +10,8 @@ import queue, threading
 import user_pref
 
 FRAME_GET_TIMEOUT_S = 0.1
+BLUR_WINDOW_SIZE = 9
+BLUR_WINDOW_OFFSET = BLUR_WINDOW_SIZE // 2
 
 class ImageController:
     def __init__(self):
@@ -107,33 +109,34 @@ class ImageController:
 
 
     def _smooth_frame(self, frame):
+
         for poi in self._topIdx.T:
-            rows = (poi[0] - 2, poi[0] + 2)
-            cols = (poi[1] - 2, poi[1] + 2)
+            rows = (poi[0] - BLUR_WINDOW_OFFSET, poi[0] + BLUR_WINDOW_OFFSET)
+            cols = (poi[1] - BLUR_WINDOW_OFFSET, poi[1] + BLUR_WINDOW_OFFSET)
             frame[rows[0]:rows[1], cols[0]:cols[1]] = \
                 cv2.GaussianBlur(frame[rows[0]:rows[1], cols[0]:cols[1]],
-                                 (5, 5), 5)
+                                 (BLUR_WINDOW_SIZE, BLUR_WINDOW_SIZE), 3)
 
         for poi in self._bottomIdx.T:
-            rows = (poi[0] - 2, poi[0] + 2)
-            cols = (poi[1] - 2, poi[1] + 2)
+            rows = (poi[0] - BLUR_WINDOW_OFFSET, poi[0] + BLUR_WINDOW_OFFSET)
+            cols = (poi[1] - BLUR_WINDOW_OFFSET, poi[1] + BLUR_WINDOW_OFFSET)
             frame[rows[0]:rows[1], cols[0]:cols[1]] = \
                 cv2.GaussianBlur(frame[rows[0]:rows[1], cols[0]:cols[1]],
-                                 (5, 5), 3)
+                                 (BLUR_WINDOW_SIZE, BLUR_WINDOW_SIZE), 3)
 
         for poi in self._leftIdx.T:
-            rows = (poi[0] - 2, poi[0] + 2)
-            cols = (poi[1] - 2, poi[1] + 2)
+            rows = (poi[0] - BLUR_WINDOW_OFFSET, poi[0] + BLUR_WINDOW_OFFSET)
+            cols = (poi[1] - BLUR_WINDOW_OFFSET, poi[1] + BLUR_WINDOW_OFFSET)
             frame[rows[0]:rows[1], cols[0]:cols[1]] = \
                 cv2.GaussianBlur(frame[rows[0]:rows[1], cols[0]:cols[1]],
-                                 (5, 5), 3)
+                                 (BLUR_WINDOW_SIZE, BLUR_WINDOW_SIZE), 3)
 
         for poi in self._rightIdx.T:
-            rows = (poi[0] - 2, poi[0] + 2)
-            cols = (poi[1] - 2, poi[1] + 2)
+            rows = (poi[0] - BLUR_WINDOW_OFFSET, poi[0] + BLUR_WINDOW_OFFSET)
+            cols = (poi[1] - BLUR_WINDOW_OFFSET, poi[1] + BLUR_WINDOW_OFFSET)
             frame[rows[0]:rows[1], cols[0]:cols[1]] = \
                 cv2.GaussianBlur(frame[rows[0]:rows[1], cols[0]:cols[1]],
-                                 (5, 5), 3)
+                                 (BLUR_WINDOW_SIZE, BLUR_WINDOW_SIZE), 3)
 
         return frame
 
@@ -175,10 +178,10 @@ class ImageController:
         self._cam.set_format(BufferType.VIDEO_CAPTURE, resolution[0], resolution[1], "MJPG")
         self._cam.set_fps(BufferType.VIDEO_CAPTURE, 30)
         self._cam.controls.brightness.value = 0
-        self._cam.controls.contrast.value = 32
-        self._cam.controls.saturation.value = 88
+        self._cam.controls.contrast.value = 16
+        self._cam.controls.saturation.value = 60
         self._cam.controls.hue.value = 0
-        self._cam.controls.gamma.value = 150
-        self._cam.controls.gain.value = 0
-        self._cam.controls.white_balance_temperature.value = 5000
+        self._cam.controls.gamma.value = 100
+        self._cam.controls.gain.value = 50
+        self._cam.controls.white_balance_temperature.value = 4100
         self._cam.controls.exposure_time_absolute.value = 128
