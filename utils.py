@@ -2,7 +2,7 @@ from scipy.interpolate import CubicSpline
 import numpy as np
 import math
 
-SIDE_LENGTH_DISCOUNT_FACTOR = 0.7
+SIDE_LENGTH_DISCOUNT_FACTOR = 1
 
 def get_led_sample_points(controlPoints, numLeds):
     topPoints = controlPoints["top"]
