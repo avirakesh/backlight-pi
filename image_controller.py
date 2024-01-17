@@ -177,9 +177,11 @@ class ImageController:
         self._cam.open()
         self._cam.set_format(BufferType.VIDEO_CAPTURE, resolution[0], resolution[1], "MJPG")
         self._cam.set_fps(BufferType.VIDEO_CAPTURE, 30)
+        self._cam.controls.auto_exposure.value = 1
+        self._cam.controls.white_balance_automatic.value = False
         self._cam.controls.brightness.value = 0
-        self._cam.controls.contrast.value = 16
-        self._cam.controls.saturation.value = 60
+        self._cam.controls.contrast.value = 0
+        self._cam.controls.saturation.value = 94
         self._cam.controls.hue.value = 0
         self._cam.controls.gamma.value = 100
         self._cam.controls.gain.value = 50
