@@ -33,10 +33,10 @@ class LEDController:
         self._shutoff = False
         # Stored in HSV
         self._prevColors = {
-            "top": [[0, 0, 0] for _ in range(0, len(self._ledIndices["top"]))],
-            "bottom": [[0, 0, 0] for _ in range(0, len(self._ledIndices["bottom"]))],
-            "left": [[0, 0, 0] for _ in range(0, len(self._ledIndices["left"]))],
-            "right": [[0, 0, 0] for _ in range(0, len(self._ledIndices["right"]))],
+            "top": np.array([[0, 0, 0] for _ in range(0, len(self._ledIndices["top"]))]),
+            "bottom": np.array([[0, 0, 0] for _ in range(0, len(self._ledIndices["bottom"]))]),
+            "left": np.array([[0, 0, 0] for _ in range(0, len(self._ledIndices["left"]))]),
+            "right": np.array([[0, 0, 0] for _ in range(0, len(self._ledIndices["right"]))]),
         }
 
         while self._shouldExit.value == 0:
@@ -65,10 +65,18 @@ class LEDController:
                 imgHsv[:, 1] = np.minimum(imgHsv[:, 1], 1) # clips the max value to 1
 
                 prevHsv = self._prevColors[side]
+
+                hueDiff = np.subtract(imgHsv[:, 0], prevHsv[:, 0])
+                goingCCW = np.greater(hueDiff, 0.5)
+                goingCW = np.less(hueDiff, -0.5)
+                prevHsv[:, 0] = np.where(goingCCW, prevHsv[:, 0], prevHsv[:, 0] + 1)
+                prevHsv[:, 0] = np.where(goingCW, prevHsv[:, 0], prevHsv[:, 0] - 1)
+
                 newHsv = np.add(
                     np.multiply(prevHsv, 1 - LERP_PARAMETER),
                     np.multiply(imgHsv, LERP_PARAMETER)
                 )
+                newHsv[:, 0] = np.mod(newHsv[:, 0], 1)
                 newRgb = np.rint(np.multiply(hsv_to_rgb(newHsv), 255)).astype(np.uint8)
                 self._prevColors[side] = newHsv
 
