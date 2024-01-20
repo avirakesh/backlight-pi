@@ -8,6 +8,7 @@ import digitalio
 import numpy as np
 import queue
 import user_pref
+from math import pi, cos
 
 QUEUE_WAIT_TIMEOUT_S = 0.1
 MAJOR_CHANGE_SAMPLE_TIME_S = 1
@@ -15,6 +16,7 @@ SHUTOFF_TIMEOUT_S = 3 * 60
 LERP_PARAMETER = 0.5
 MAJOR_CHANGE_DELTA = 0.45
 SHUTOFF_DEBOUCE_TIME_S = 10
+COS_120_DEG = cos((pi / 180) * 120)
 
 class LEDController:
     def __init__(self, shouldExit: Value, colorQueue: Queue, power: Value):
@@ -52,9 +54,14 @@ class LEDController:
             for side, imgColor in imgColors.items():
                 imgHsv = rgb_to_hsv(np.divide(imgColor, 255))
 
-                # Compensate for LED being desaturated by bumping up the
-                # saturation just a little
-                imgHsv[:, 1] = np.multiply(imgHsv[:, 1], 1.3)
+                # Boost the saturation of colors that are close to
+                # red.
+                redComponent = np.multiply(imgHsv[:, 0], 2*pi)
+                redComponent = np.cos(redComponent)
+                redComponent = np.add(redComponent, COS_120_DEG + 1)
+                redComponent = np.maximum(redComponent, 1) # clip all values < 1 to 1
+                redComponent = np.power(redComponent, 3)
+                imgHsv[:, 1] = np.multiply(imgHsv[:, 1], redComponent)
                 imgHsv[:, 1] = np.minimum(imgHsv[:, 1], 1) # clips the max value to 1
 
                 prevHsv = self._prevColors[side]
