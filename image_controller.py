@@ -181,7 +181,7 @@ class ImageController:
         self._cam.controls.white_balance_automatic.value = False
         self._cam.controls.brightness.value = 0
         self._cam.controls.contrast.value = 0
-        self._cam.controls.saturation.value = 94
+        self._cam.controls.saturation.value = 60
         self._cam.controls.hue.value = 0
         self._cam.controls.gamma.value = 100
         self._cam.controls.gain.value = 50
