@@ -179,11 +179,11 @@ class ImageController:
         self._cam.set_fps(BufferType.VIDEO_CAPTURE, 30)
         self._cam.controls.auto_exposure.value = 1
         self._cam.controls.white_balance_automatic.value = False
-        self._cam.controls.brightness.value = 0
+        self._cam.controls.brightness.value = -64
         self._cam.controls.contrast.value = 0
-        self._cam.controls.saturation.value = 60
+        self._cam.controls.saturation.value = 80
         self._cam.controls.hue.value = 0
         self._cam.controls.gamma.value = 100
-        self._cam.controls.gain.value = 50
+        self._cam.controls.gain.value = 100
         self._cam.controls.white_balance_temperature.value = 4100
         self._cam.controls.exposure_time_absolute.value = 128

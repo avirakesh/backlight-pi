@@ -54,18 +54,7 @@ class LEDController:
             for side, imgColor in imgColors.items():
                 imgHsv = rgb_to_hsv(np.divide(imgColor, 255))
 
-                # Boost the saturation of colors that are close to
-                # red.
-                redComponent = np.multiply(imgHsv[:, 0], 2*pi)
-                redComponent = np.cos(redComponent)
-                redComponent = np.add(redComponent, COS_120_DEG + 1)
-                redComponent = np.maximum(redComponent, 1) # clip all values < 1 to 1
-                redComponent = np.power(redComponent, 3)
-                imgHsv[:, 1] = np.multiply(imgHsv[:, 1], redComponent)
-                imgHsv[:, 1] = np.minimum(imgHsv[:, 1], 1) # clips the max value to 1
-
                 prevHsv = self._prevColors[side]
-
                 hueDiff = np.subtract(imgHsv[:, 0], prevHsv[:, 0])
                 goingCCW = np.greater(hueDiff, 0.5)
                 goingCW = np.less(hueDiff, -0.5)
