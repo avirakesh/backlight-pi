@@ -1,4 +1,6 @@
 from adafruit_debouncer import Debouncer
+from copy import deepcopy
+from math import pi, cos
 from matplotlib.colors import rgb_to_hsv, hsv_to_rgb
 from multiprocessing import Process, Queue, Value
 from neopixel import NeoPixel
@@ -8,15 +10,11 @@ import digitalio
 import numpy as np
 import queue
 import user_pref
-from math import pi, cos
 
-QUEUE_WAIT_TIMEOUT_S = 0.1
-MAJOR_CHANGE_SAMPLE_TIME_S = 1
-SHUTOFF_TIMEOUT_S = 3 * 60
-LERP_PARAMETER = 0.5
-MAJOR_CHANGE_DELTA = 0.45
-SHUTOFF_DEBOUCE_TIME_S = 10
 COS_120_DEG = cos((pi / 180) * 120)
+LERP_PARAMETER = 0.5
+MAX_ITERATIONS_SINCE_FRAME = 10
+QUEUE_WAIT_TIMEOUT_S = 0.1
 
 class LEDController:
     def __init__(self, shouldExit: Value, colorQueue: Queue, power: Value):
@@ -38,6 +36,8 @@ class LEDController:
             "left": np.array([[0, 0, 0] for _ in range(0, len(self._ledIndices["left"]))]),
             "right": np.array([[0, 0, 0] for _ in range(0, len(self._ledIndices["right"]))]),
         }
+        self._targetColors = deepcopy(self._prevColors)
+        self._iterationsSinceFrame = MAX_ITERATIONS_SINCE_FRAME + 1
 
         while self._shouldExit.value == 0:
             self._shutoff = not self._power.value
@@ -48,36 +48,23 @@ class LEDController:
 
     def _process_colors(self):
         try:
-            imgColors = self._colorQueue.get(block=True,
+            # Don't block if we can iterate on the color
+            shouldBlock = self._iterationsSinceFrame > MAX_ITERATIONS_SINCE_FRAME
+            imgColors = self._colorQueue.get(block=shouldBlock,
                                              timeout=QUEUE_WAIT_TIMEOUT_S)
 
-            for side, imgColor in imgColors.items():
-                imgHsv = rgb_to_hsv(np.divide(imgColor, 255))
-
-                prevHsv = self._prevColors[side]
-                hueDiff = np.subtract(imgHsv[:, 0], prevHsv[:, 0])
-                goingCCW = np.greater(hueDiff, 0.5)
-                goingCW = np.less(hueDiff, -0.5)
-                prevHsv[:, 0] = np.where(goingCCW, prevHsv[:, 0], prevHsv[:, 0] + 1)
-                prevHsv[:, 0] = np.where(goingCW, prevHsv[:, 0], prevHsv[:, 0] - 1)
-
-                newHsv = np.add(
-                    np.multiply(prevHsv, 1 - LERP_PARAMETER),
-                    np.multiply(imgHsv, LERP_PARAMETER)
-                )
-                newHsv[:, 0] = np.mod(newHsv[:, 0], 1)
-                newRgb = np.rint(np.multiply(hsv_to_rgb(newHsv), 255)).astype(np.uint8)
-                self._prevColors[side] = newHsv
-
-                if not self._isOff:
-                    for colorIdx, ledIdx in enumerate(self._ledIndices[side]):
-                        self._leds[ledIdx] = newRgb[colorIdx]
-
-            self._leds.show()
+            # Frame found, process new frame!
+            self._targetColors = {
+                side: rgb_to_hsv(np.divide(imgColor, 255)) \
+                    for side, imgColor in imgColors.items()
+            }
+            self._iterationsSinceFrame = 1
+            self._transition_to_target_colors()
 
         except queue.Empty:
-            # Empty Queue, do nothing.
-            pass
+            if (self._iterationsSinceFrame < MAX_ITERATIONS_SINCE_FRAME):
+                self._iterationsSinceFrame += 1
+                self._transition_to_target_colors()
 
         if self._shutoff and not self._isOff:
             for ledIndices in self._ledIndices.values():
@@ -85,6 +72,32 @@ class LEDController:
                     self._leds[ledIdx] = [0, 0, 0]
             self._leds.show()
         self._isOff = self._shutoff
+
+
+    def _transition_to_target_colors(self):
+        if self._isOff:
+            return
+
+        for side, imgHsv in self._targetColors.items():
+            prevHsv = self._prevColors[side]
+            hueDiff = np.subtract(imgHsv[:, 0], prevHsv[:, 0])
+            goingCCW = np.greater(hueDiff, 0.5)
+            goingCW = np.less(hueDiff, -0.5)
+            prevHsv[:, 0] = np.where(goingCCW, prevHsv[:, 0], prevHsv[:, 0] + 1)
+            prevHsv[:, 0] = np.where(goingCW, prevHsv[:, 0], prevHsv[:, 0] - 1)
+
+            newHsv = np.add(
+                np.multiply(prevHsv, 1 - LERP_PARAMETER),
+                np.multiply(imgHsv, LERP_PARAMETER)
+            )
+            newHsv[:, 0] = np.mod(newHsv[:, 0], 1)
+            newRgb = np.rint(np.multiply(hsv_to_rgb(newHsv), 255)).astype(np.uint8)
+            self._prevColors[side] = newHsv
+
+            for colorIdx, ledIdx in enumerate(self._ledIndices[side]):
+                self._leds[ledIdx] = newRgb[colorIdx]
+
+        self._leds.show()
 
 
     def _read_user_prefs(self):
