@@ -7,6 +7,7 @@ DEVICE_FILE = "v4l2_device.txt"
 RESOLUTION_FILE = "resolution.txt"
 CALIBRATION_FILE = "calibration.json"
 LED_INFO_FILE = "led.json"
+SAMPLE_POINTS_FILE = "sample_points.json"
 
 
 def read_ignored_nodes():

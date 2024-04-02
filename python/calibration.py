@@ -2,6 +2,7 @@ from datetime import datetime
 from math import floor
 from os import path
 from pin_to_pin import AVAILABLE_PINS
+from utils import get_led_sample_points
 from scipy.interpolate import CubicSpline
 from time import perf_counter, sleep
 from turbojpeg import TurboJPEG, TJFLAG_FASTUPSAMPLE, TJFLAG_FASTDCT
@@ -322,6 +323,30 @@ def get_led_information_from_user():
         json.dump(ledInfo, ledFile, indent=4)
 
 
+def calculate_sample_points():
+    print("Calculating Sample Points from Calibration Data and LED information")
+    print("-------------------------------------------------------------------")
+    controlPoints = user_pref.read_calibration_data()
+    pointCounts = user_pref.read_led_counts()
+
+    sampledPoints = get_led_sample_points(controlPoints, pointCounts)
+    sampledPoints = {
+        key: [
+            (int(x), int(y)) \
+                for (x, y) in val
+        ] for (key, val) in sampledPoints.items()
+    }
+
+    configPath = path.join(user_pref.CONFIG_PATH)
+    if not path.exists(configPath):
+        print(f"ERROR: {configPath} does not exist. Run setup.py first!")
+        exit(1)
+
+    samplePointsPath = path.join(configPath, user_pref.SAMPLE_POINTS_FILE);
+    with open(samplePointsPath, "w") as samplePointsFile:
+        json.dump(sampledPoints, samplePointsFile, indent=4)
+
+
 def run_full_calibration():
     while True:
         capture_frame_for_calibration()
@@ -344,6 +369,9 @@ def run_full_calibration():
             break
 
     get_led_information_from_user()
+    print()
+    calculate_sample_points();
+    print()
     print("All calibration done. Backlight Pi should be good to go!")
 
 
@@ -359,14 +387,16 @@ if __name__ == "__main__":
         print(f"        set-control : Get a frame to get control points from")
         print(f"        get-control : Show bounds as set by control points")
         print(f"        set-led     : Setup LED strip information")
+        print(f"        set-samples : Pre-calculate the sample points to be used")
         exit(1)
-
     elif sys.argv[1] == "set-control":
         capture_frame_for_calibration()
     elif sys.argv[1] == "get-control":
         display_calibrated_frame()
     elif sys.argv[1] == "set-led":
         get_led_information_from_user()
+    elif sys.argv[1] == "set-samples":
+        calculate_sample_points()
     else:
         print("Invalid args. Usage:")
         print(f"    python {sys.argv[0]} [set-control|get-control|set-led]")
@@ -374,4 +404,5 @@ if __name__ == "__main__":
         print(f"        set-control : Get a frame to get control points from")
         print(f"        get-control : Show bounds as set by control points")
         print(f"        set-led     : Setup LED strip information")
+        print(f"        set-samples : Pre-calculate the sample points to be used")
         exit(1)
