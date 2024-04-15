@@ -1,0 +1,15 @@
+[package]
+name = "backlight-pi"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+json = "0.12.4"
+palette = "0.7.5"
+queues = "1.1.0"
+rppal = "0.17.1"
+rs_ws281x = "0.5.1"
+rscam = { version = "0.5.5", features = ["no_wrapper"] }
+turbojpeg = "1.0.1"
