@@ -22,15 +22,31 @@ use crate::{
 };
 
 pub(crate) struct CameraController {
+    /**
+     * Handle to be unparked when power is turned on.
+     * This allows the thread to sleep while power is "off".
+     */
     pub(crate) thread_handle: thread::JoinHandle<()>,
+    /**
+     * Blocking queue that will contain the sampled colors from the frames
+     */
     pub(crate) sample_points_queue: Arc<SampledColorsQueue>,
 }
 
+/**
+ * Simple blocking queue structure to transfer frames from V4L2 camera to the
+ * sampler thread.
+ * We don't need a queue for empty Frames because Frames going out of scope
+ * returns the V4L2 buffer implicitly.
+ */
 struct V4L2FrameQueue {
     filled_queue: Mutex<Queue<Arc<Frame>>>,
     filled_cv: Condvar,
 }
 
+/**
+ * Entry point for starting the camera threads.
+ */
 pub(crate) fn start_camera_controller(
     power_on: Arc<AtomicBool>,
     device: DevicePreference,
@@ -57,6 +73,12 @@ pub(crate) fn start_camera_controller(
     }
 }
 
+//////////////////////////// Image Sampler Thread Start ////////////////////////////
+/**
+ * Does what it says on the tin. Starts another thread to fetch frames from
+ * V4L2 camera, and  uses the calling thread to decode V4L2 frames and sample
+ * colors from the decoded frames.
+ */
 fn _main_camera_controller_loop(
     power_on: Arc<AtomicBool>,
     device: Arc<DevicePreference>,
@@ -65,6 +87,7 @@ fn _main_camera_controller_loop(
 ) {
     loop {
         while !power_on.load(Ordering::Relaxed) {
+            // power_controller will unpark the thread when power is turned on.
             thread::park_timeout(Duration::from_secs(10));
         }
 
@@ -77,6 +100,10 @@ fn _main_camera_controller_loop(
         let v4l2_queue_clone = v4l2_queue.clone();
         let device_clone = device.clone();
 
+        // Thread to get image from the V4L2 camera, and pump them to this
+        // thread to be decoded and sampled.
+        // Two threads are needed because RPi Zero cannot decode
+        // JPEGs at 30fps, and we don't want stale camera frames.
         let v4l2_thread = thread::spawn(move || {
             // println!("Starting V4L2 Thread...");
             _pump_v4l2_frames_from_camera(power_on_clone, device_clone, v4l2_queue_clone);
@@ -96,6 +123,10 @@ fn _main_camera_controller_loop(
     }
 }
 
+/**
+ * Loop to get frames from v4l2_thread, decode the frame, pick out colors from
+ * specific windows, and send the sampled colors to led_controller
+ */
 fn _decode_and_pump_sampled_colors(
     power_on: Arc<AtomicBool>,
     device: Arc<DevicePreference>,
@@ -104,6 +135,10 @@ fn _decode_and_pump_sampled_colors(
     sampled_colors_queue: Arc<SampledColorsQueue>,
 ) {
     {
+        // Set up the empty sampled color buffers.
+        // led_controller only ever grabs one buffer; the other two are kept to
+        // ensure that stale buffers can be recycled in case led_controller
+        // takes too long.
         let mut empty_queue = sampled_colors_queue.empty_queue.lock().unwrap();
         for _ in 0..3 {
             let sampled_colors = Box::new(SampledColors {
@@ -129,7 +164,7 @@ fn _decode_and_pump_sampled_colors(
 
     // Main decode and pump loop
     while power_on.load(Ordering::Relaxed) {
-        // Get a buffer for sending the points on.
+        // Fetch an empty sampled colors buffer to fill.
         let mut empty_points_opt: Option<Box<SampledColors>> = Option::None;
         while power_on.load(Ordering::Relaxed) {
             let mut empty_points_q = sampled_colors_queue.empty_queue.lock().unwrap();
@@ -185,7 +220,7 @@ fn _decode_and_pump_sampled_colors(
         }
 
         let filled_frame = filled_frame_opt.unwrap();
-        // Decode v4l2 frame
+        // Decode v4l2 frame to RGB
         let temp_rgb = Image {
             pixels: &mut rgb_buffer.pixels[..],
             width: rgb_buffer.width,
@@ -193,13 +228,14 @@ fn _decode_and_pump_sampled_colors(
             height: rgb_buffer.height,
             format: rgb_buffer.format,
         };
-
         let decode_res = _decode_v4l2_frame_to_rgb(&filled_frame, &mut decompressor, temp_rgb);
         if decode_res.is_err() {
             // Camera occasionally sends a malformed jpeg. Log and drop.
             println!("Failed to decode image: {}", decode_res.unwrap_err());
             continue;
         }
+
+        // Sample points from the frame and put them in the empty buffer
         _sample_frames(&rgb_buffer, sample_windows, &mut empty_points);
 
         // One last check before sending the sampled points off!
@@ -210,10 +246,13 @@ fn _decode_and_pump_sampled_colors(
         let mut removed_points_opt: Option<Box<SampledColors>> = Option::None;
         {
             let mut filled_samples_q = sampled_colors_queue.filled_queue.lock().unwrap();
+            // Remove any existing sampled color buffer from the queue to give led_controller
+            // the most up-to-date sample
             let removed_points_res = filled_samples_q.remove();
             if !removed_points_res.is_err() {
                 removed_points_opt = Option::Some(removed_points_res.unwrap());
             }
+            // Queue up the latest samples
             filled_samples_q.add(empty_points).unwrap();
         }
         sampled_colors_queue.filled_cv.notify_all();
@@ -227,6 +266,9 @@ fn _decode_and_pump_sampled_colors(
     } // main decode loop
 }
 
+/**
+ * Decodes a MJPEG frame from V4L2 camera to RGB buffer
+ */
 fn _decode_v4l2_frame_to_rgb(
     mjpg: &Frame,
     decompressor: &mut Decompressor,
@@ -241,6 +283,9 @@ fn _decode_v4l2_frame_to_rgb(
     Ok(())
 }
 
+/**
+ * Sample specific windows from the image.
+ */
 fn _sample_frames(
     image: &Image<Vec<u8>>,
     sample_windows: &SampleWindows,
@@ -267,6 +312,10 @@ fn _sample_frames(
     }
 }
 
+/**
+ * Calculate convolution of one point on the image with the given kernel.
+ * Assume bounds to be of the size as the convolution kernel.
+ */
 fn _calculate_value_for_bounds(
     image: &Image<Vec<u8>>,
     bounds: &((usize, usize), (usize, usize)),
@@ -297,15 +346,25 @@ fn _calculate_value_for_bounds(
 
     let rgb: Srgb<u8> = Srgb::from([r as u8, g as u8, b as u8]);
     let rgb: Srgb = rgb.into_format();
+    // Convert color to HSV for easy interpolation.
     *output = rgb.into_color();
 }
 
+/**
+ * Utility function to convert the conventional (x, y) coordinates to an index in the flat buffer.
+ */
 fn _coords_to_idx((x, y): &(usize, usize), stride: usize) -> usize {
     let row_idx = y * stride;
     let col_idx = x * PixelFormat::RGB.size();
     row_idx + col_idx
 }
+//////////////////////////// Image Sampler Thread Start ////////////////////////////
 
+//////////////////////////// V4L2 Thread Start ////////////////////////////
+/**
+ * Main thread loop that opens the V4L2 device, configures it, and pumps frame
+ * to the sampler thread.
+ */
 fn _pump_v4l2_frames_from_camera(
     power_on: Arc<AtomicBool>,
     device: Arc<DevicePreference>,
@@ -325,13 +384,10 @@ fn _pump_v4l2_frames_from_camera(
     };
 
     camera.start(&config).unwrap();
+
     // let start = Instant::now();
     // let mut num_frames: u64 = 0;
     while power_on.load(Ordering::Relaxed) {
-        // Frame is automatically "returned" when it is dropped, so we
-        // don't need to explicitly send them back. The consumer of v4l2
-        // frames can simply drop the owned Arc<Frame> object and that
-        // will auto return the frame to v4l2 pipeline.
         let frame = Arc::new(camera.capture().unwrap());
         // println!("Frame fetched.");
         // num_frames += 1;
@@ -375,8 +431,14 @@ fn _pump_v4l2_frames_from_camera(
             // silently drop the frame (by going out of scope)
         }
     }
+
+    camera.stop().unwrap();
 }
 
+/**
+ * Simple utility function to set V4L2 controls of the given Camera.
+ * These values were determined by trial and error, your results might vary.
+ */
 fn _set_v4l2_camera_controls(camera: &mut Camera) {
     camera.set_control(CID_BRIGHTNESS, &64).unwrap();
     camera.set_control(CID_CONTRAST, &80).unwrap();
@@ -400,3 +462,4 @@ fn _set_v4l2_camera_controls(camera: &mut Camera) {
     camera.set_control(CID_EXPOSURE_AUTO, &1).unwrap();
     camera.set_control(CID_EXPOSURE_ABSOLUTE, &300).unwrap();
 }
+//////////////////////////// V4L2 Thread End ////////////////////////////
