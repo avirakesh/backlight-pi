@@ -3,21 +3,26 @@
 A simple program to add dymanic backlight to any screen.
 
 <img src="../docs/imgs/in-action.jpg" alt="backlight-pi in action"
-    width=50% height=50% />
+    width=75% height=75% />
 
-## Table of Contents
+## Table of contents
 - [Setting Up](#setting-up)
   - [0. Get all the ingredients](#0-get-all-the-ingredients)
   - [1. Set up the LED Strip](#1-set-up-the-led-strip)
   - [2. Set up the Camera](#2-set-up-the-camera)
   - [3. Set up the Capacitive Sensor](#3-set-up-the-capacitive-sensor)
   - [4. Set up the Raspberry Pi](#4-set-up-the-raspberry-pi)
-- [Running the Script](#running-the-script)
+- [Configure your setup](#configure-your-setup)
   - [0. Get code and dependencies](#0-get-code-and-dependencies)
   - [1. Set up the camera:](#1-set-up-the-camera)
   - [2. Calibrate Camera and LEDs:](#2-calibrate-camera-and-leds)
-  - [3. Run the script:](#3-run-the-script)
-- [Known Issues](#known-issues)
+  - [3. Move the generated `config` directory to the `rust` directory](#3-move-the-generated-config-directory-to-the-rust-directory)
+- [Known Issues During Setup](#known-issues-during-setup)
+- [Start `backlight-pi`](#start-backlight-pi)
+  - [0. Install Rust](#0-install-rust)
+  - [1. Build Executable](#1-build-executable)
+  - [2. Run Executable](#2-run-executable)
+  - [3. Fin.](#3-fin)
 
 
 ## Setting Up
@@ -78,16 +83,24 @@ connected to a GPIO pin of the Raspberry Pi.
 No extra steps needed to set up the Raspberry Pi. As long as you can
 run a python script on it, you should be good to go!
 
-## Running the Script
+## Configure your setup
+
+**NOTE:** This and the next sections are borrowed from the [python](../python/)
+implementation. The logic for setting up the various bits and pieces is still
+implemented in Python and I am too lazy to port it over to Rust.
+
+So for now python is still needed to configure your setup.
+
 ### 0. Get code and dependencies
 1. Download the code: either as a zip, or using `git clone`
-2. Install all the requirements in [`requirements.txt`](./requirements.txt)
+2. Navigate to [python](../python/)
+3. Install all the requirements in [`requirements.txt`](./requirements.txt)
    using:
    ```
    pip install -r requirements.txt
    ```
    This may take a while as it install `numpy` and `scipy`.
-3. Go grab a coffee while pip does its thing (yes, this step is mandatory!)
+4. Go grab a coffee while pip does its thing (yes, this step is mandatory!)
 
 
 ### 1. Set up the camera:
@@ -130,7 +143,7 @@ bounds, and to set up the LED strips.
 
 Run the python script as follows:
 ```
-sudo -E python calibration.py [set-control|get-control|set-led]
+sudo -E python calibration.py [set-control|get-control|set-led|set-samples]
 ```
 `sudo` is needed for controlling GPIO pins, and `-E` is required to pass your
 current environment to the `sudo` enviroment.
@@ -150,15 +163,14 @@ Not providing any argument will run all 4 routines in the order above.
 More information on how to calibrate can be found at
 [`../docs/calibration.md`](docs/calibration.md).
 
-### 3. Run the script:
-Once you're happy with your calibration, run
-```
-$ sudo -E python main.py
+### 3. Move the generated `config` directory to the `rust` directory
+
+Assuming you've already navigated to the rust directory:
+```bash
+mv ../python/config ./
 ```
 
-and watch your LEDs come to life!
-
-## Known Issues
+## Known Issues During Setup
 - **`OSError: [Errno 25] Inappropriate ioctl for device` when running
   `setup_devices.py`.**
 
@@ -227,3 +239,54 @@ and watch your LEDs come to life!
 
   To fix this issue use manual exposure time. See `_setup_camera` function in
   `image_controller.py` for an example.
+
+
+## Start `backlight-pi`
+### 0. Install Rust
+Rust can be installed on the Raspberry Pi from the official website:
+https://www.rust-lang.org/tools/install
+
+**Caveat:**
+
+Raspberry Pi Zero has too little RAM to install Rust, so simply executing
+the install script may lead to the RPi completely hanging. To fix this, simply
+download some spare RAM from
+[here](https://youtu.be/dQw4w9WgXcQ?si=2lPaj3JhJv5nXj3Q) and return it once
+Rust has finished installing.
+
+Slightly seriously: We need set some environment variables to ensure that
+Rust installation does not end up consuming the entire RAM.
+
+The following environment variables need to be set _before_ calling the Rust
+install script.
+```bash
+export RUSTUP_UNPACK_RAM=200000000 # set max RAM usage to ~200MB (RPi has 512MB)
+export RUSTUP_IO_THREADS=1         # set max thread count to 1
+```
+
+This will also take a while, so go refill your coffee.
+
+### 1. Build Executable
+Once Rust and Cargo have been installed, building the executable is as simple
+as calling
+
+```bash
+cargo build --release -j1
+```
+`-j1` limits the number of threads used to `1`, which prevents limits RAM usage.
+This prevents cargo from greedily consuming all available RAM.
+
+Hope you didn't finish that coffee yet, because might take a while as well.
+
+### 2. Run Executable
+The `cargo build` command from previous step will generate an executable binary
+at `target/release/backlight-pi`.
+
+To run the binary, simply call
+```bash
+sudo ./target/release/backlight-pi
+```
+
+The `sudo` is needed to interact with the GPIO pins.
+
+### 3. Fin.
