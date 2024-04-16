@@ -108,7 +108,7 @@ fn _get_samples_and_draw(
 
             let mut wait_timeout = sampled_colors
                 .filled_cv
-                .wait_timeout(filled_q, Duration::from_millis(1))
+                .wait_timeout(filled_q, Duration::from_millis(30))
                 .unwrap();
 
             let filled_res = wait_timeout.0.remove();
