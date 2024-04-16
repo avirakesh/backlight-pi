@@ -1,6 +1,6 @@
 # backlight-pi
 
-A simple program to add dymanic backlight to any screen.
+A simple program to add dynamic backlight to any screen.
 
 <img src="../docs/imgs/in-action.jpg" alt="backlight-pi in action"
     width=75% height=75% />
@@ -146,7 +146,7 @@ Run the python script as follows:
 sudo -E python calibration.py [set-control|get-control|set-led|set-samples]
 ```
 `sudo` is needed for controlling GPIO pins, and `-E` is required to pass your
-current environment to the `sudo` enviroment.
+current environment to the `sudo` environment.
 
 `calibration.py` provides three routines to interactively calibrate the script
 for a specific setup. These can be passed as command line arguments to the

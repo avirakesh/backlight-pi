@@ -58,7 +58,7 @@ The anatomy of `calibration.json` is as follows:
 {
     "top": [
         // These must be ordered left to right,
-        // i.e. x cordinates should be in increasing order
+        // i.e. x coordinates should be in increasing order
         738, 462, // x1, y1,
         815, 443, // x2, y2,
         948, 404, // x3, y3,
@@ -67,14 +67,14 @@ The anatomy of `calibration.json` is as follows:
     ],
     "left": [
         // These must be ordered top to bottom,
-        // i.e. y cordinates should be in increasing order
+        // i.e. y coordinates should be in increasing order
         731, 476, // x1, y1,
         734, 553, // x2, y2,
         742, 654 // x3, y3
     ],
     "bottom": [
         // These must be ordered left to right,
-        // i.e. x cordinates should be in increasing order
+        // i.e. x coordinates should be in increasing order
         750, 666, // x1, y1,
         866, 706, // x2, y2,
         1020, 770, // x3, y3,
@@ -83,7 +83,7 @@ The anatomy of `calibration.json` is as follows:
     ],
     "right": [
         // These must be ordered top to bottom,
-        // i.e. y cordinates should be in increasing order
+        // i.e. y coordinates should be in increasing order
         1303, 339, // x1, y1,
         1322, 496, // x2, y2,
         1309, 729, // x3, y3,
@@ -216,7 +216,7 @@ Calculating Sample Points from Calibration Data and LED information
 ```
 
 This uses the control points and the LED information set up using
-`set-control` and `set-led` to calulate the points on the image that must
+`set-control` and `set-led` to calculate the points on the image that must
 be sampled.
 
 The python implementation doesn't actually use this data, only the Rust
