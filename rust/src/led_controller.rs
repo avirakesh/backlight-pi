@@ -16,6 +16,10 @@ use crate::{
     user_config::{LedInfo, Side},
 };
 
+/**
+ * Entry point for start LED controller thread. Returns the thread's handle
+ * which must be unparked when power turns "on".
+ */
 pub(crate) fn start_led_controller(
     power_on: Arc<AtomicBool>,
     sample_points: Arc<SampledColorsQueue>,
@@ -27,6 +31,10 @@ pub(crate) fn start_led_controller(
     })
 }
 
+/**
+ * Does what it says on the tin. Fetches filled sampled color buffers and
+ * updates the LED with the sampled colors.
+ */
 fn _main_led_thread_loop(
     power_on: Arc<AtomicBool>,
     sample_points: Arc<SampledColorsQueue>,
@@ -34,9 +42,11 @@ fn _main_led_thread_loop(
 ) {
     loop {
         while !power_on.load(Ordering::Relaxed) {
+            // Efficiently wait for power to be turned on.
             park();
         }
 
+        // Setup the LED Controller object.
         let mut led_controller = ControllerBuilder::new()
             .dma(10)
             .channel(
@@ -51,6 +61,7 @@ fn _main_led_thread_loop(
             .build()
             .unwrap();
 
+        // Kick off the sample fetching and rendering loop.
         _get_samples_and_draw(
             power_on.clone(),
             sample_points.clone(),
@@ -58,7 +69,7 @@ fn _main_led_thread_loop(
             &led_info,
         );
 
-        // Above function only returns on power off. See all LEDs to "off"
+        // Above function only returns on power off. Set all LEDs to "off"
         let leds = led_controller.leds_mut(0);
         for led in leds {
             *led = [0, 0, 0, 0];
@@ -73,8 +84,7 @@ fn _get_samples_and_draw(
     led_controller: &mut Controller,
     led_info: &LedInfo,
 ) {
-    // let mut start = Instant::now();
-    // let mut num_frames: u64 = 0;
+    // Track the current values of the LEDs
     let mut current_colors = SampledColors {
         top: vec![Hsv::from([0.0, 0.0, 0.0]); led_info.led_idxs.get(&Side::TOP).unwrap().len()],
         bottom: vec![
@@ -85,11 +95,15 @@ fn _get_samples_and_draw(
         right: vec![Hsv::from([0.0, 0.0, 0.0]); led_info.led_idxs.get(&Side::RIGHT).unwrap().len()],
     };
 
+    // Tracks the colors we're trying to get to
     let mut target_colors = current_colors.clone();
 
+    // Number of iterations to try and get to target colors
     let mut num_iters: u32 = 0;
-    const MAX_ITERS: u32 = 20;
+    const MAX_ITERS: u32 = 30;
 
+    // let mut start = Instant::now();
+    // let mut num_frames: u64 = 0;
     while power_on.load(Ordering::Relaxed) {
         // Grab filled sampled points
         let mut filled_opt: Option<Box<SampledColors>> = Option::None;
@@ -101,8 +115,8 @@ fn _get_samples_and_draw(
                 break;
             }
 
+            // Do not wait if we might still be transitioning to the target color
             if num_iters < MAX_ITERS {
-                // Do not wait if we're still transitioning to the target color
                 break;
             }
 
@@ -118,6 +132,9 @@ fn _get_samples_and_draw(
             }
         }
 
+        // Either power is off, or we're transitioning to target color.
+        // Either way render the target colors.
+        // If power is off, the loop will break after the render.
         if filled_opt.is_none() {
             num_iters += 1;
             _display_colors(
@@ -129,15 +146,18 @@ fn _get_samples_and_draw(
             continue;
         }
 
+        // Make a copy of the filled sampled colors buffer.
         let filled_colors = filled_opt.unwrap();
         target_colors = *filled_colors.clone();
 
         {
-            // Return the consumed colors
+            // Return the consumed colors to camera_controller
             let mut empty_q = sampled_colors.empty_queue.lock().unwrap();
             empty_q.add(filled_colors).unwrap();
         }
         sampled_colors.empty_cv.notify_all();
+
+        // New target_colors found. Reset num_iters, and display the colors
         num_iters = 0;
         _display_colors(
             led_controller,
@@ -163,6 +183,14 @@ fn _get_samples_and_draw(
     }
 }
 
+/**
+ * Set LED Colors. It iterpolates colors between current_colors and
+ * target_colors for each LED. The new colors of the LED are set in
+ * current_colors.
+ *
+ * Must be called repeatedly with the same current and
+ * target colors to transition to colors fully.
+ */
 fn _display_colors(
     led_controller: &mut Controller,
     led_info: &LedInfo,
@@ -180,9 +208,12 @@ fn _display_colors(
         .zip(current_colors.top.iter_mut())
         .zip(target_colors.top.iter())
     {
+        // Calulate an interpolated value in HSV space.
         current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
+        // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
+        // Update the LED with the interpolated color
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
     }
 
@@ -194,9 +225,12 @@ fn _display_colors(
         .zip(current_colors.bottom.iter_mut())
         .zip(target_colors.bottom.iter())
     {
+        // Calulate an interpolated value in HSV space.
         current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
+        // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
+        // Update the LED with the interpolated color
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
     }
 
@@ -208,9 +242,12 @@ fn _display_colors(
         .zip(current_colors.left.iter_mut())
         .zip(target_colors.left.iter())
     {
+        // Calulate an interpolated value in HSV space.
         current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
+        // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
+        // Update the LED with the interpolated color
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
     }
 
@@ -222,9 +259,12 @@ fn _display_colors(
         .zip(current_colors.right.iter_mut())
         .zip(target_colors.right.iter())
     {
+        // Calulate an interpolated value in HSV space.
         current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
+        // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
+        // Update the LED with the interpolated color
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
     }
 
