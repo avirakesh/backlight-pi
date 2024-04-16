@@ -10,6 +10,19 @@ These two pieces are set through the `set-control` and `set-led` routines.
 Let's call `calibration.py` without any arguments, and  explain the different
 routines as they're called.
 
+## Table of Contents
+- [1. `set-control`](#1-set-control)
+- [2. `get-control`](#2-get-control)
+- [3. `set-led`](#3-set-led)
+  - [LED driving pin:](#led-driving-pin)
+  - [LED counts:](#led-counts)
+  - [LED strip order:](#led-strip-order)
+  - [LED strip orientation:](#led-strip-orientation)
+  - [Pin to turn LEDs on/off:](#pin-to-turn-leds-onoff)
+- [4. `set-samples`](#4-set-samples)
+- [5. Fin.](#5-fin)
+
+
 
 ```
 $ sudo -E python calibration.py
@@ -118,7 +131,7 @@ them to the printed path. In my case, the output image looks like:
 Notice the red lines towards the edges of the screen. These are the lines along
 which the image will be sampled to color the LEDs.
 
-## 3. set-led
+## 3. `set-led`
 ```
 Setting up LED Strips
 ---------------------
@@ -196,7 +209,20 @@ and will be turned on any time this pin is pulled up. So the TTP223 sensor can
 be replaced with a toggle switch (or anything else) that pulls the pin up and
 down.
 
-## 4. Fin.
+## 4. `set-samples`
+```
+Calculating Sample Points from Calibration Data and LED information
+-------------------------------------------------------------------
+```
+
+This uses the control points and the LED information set up using
+`set-control` and `set-led` to calulate the points on the image that must
+be sampled.
+
+The python implementation doesn't actually use this data, only the Rust
+implementation does.
+
+## 5. Fin.
 ```
 All calibration done. Backlight Pi should be good to go!
 ```
