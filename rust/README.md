@@ -273,8 +273,8 @@ as calling
 ```bash
 cargo build --release -j1
 ```
-`-j1` limits the number of threads used to `1`, which prevents limits RAM usage.
-This prevents cargo from greedily consuming all available RAM.
+`-j1` limits the number of threads used to `1`, which prevents cargo from
+greedily consuming all available RAM.
 
 Hope you didn't finish that coffee yet, because might take a while as well.
 
