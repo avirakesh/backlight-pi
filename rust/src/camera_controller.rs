@@ -379,7 +379,7 @@ fn _pump_v4l2_frames_from_camera(
 
 fn _set_v4l2_camera_controls(camera: &mut Camera) {
     camera.set_control(CID_BRIGHTNESS, &64).unwrap();
-    camera.set_control(CID_CONTRAST, &60).unwrap();
+    camera.set_control(CID_CONTRAST, &80).unwrap();
     camera.set_control(CID_SATURATION, &150).unwrap();
     camera.set_control(CID_HUE, &0).unwrap();
     camera.set_control(CID_GAMMA, &100).unwrap();
@@ -391,12 +391,12 @@ fn _set_v4l2_camera_controls(camera: &mut Camera) {
     // potentially messing the colors.
     camera.set_control(CID_AUTO_WHITE_BALANCE, &0).unwrap();
     camera
-        .set_control(CID_WHITE_BALANCE_TEMPERATURE, &4600)
+        .set_control(CID_WHITE_BALANCE_TEMPERATURE, &4100)
         .unwrap();
 
     // Disable auto exposure and set an exposure value
     // This is needed to prevent the camera from auto blowing out dark scenes
     // or dimming dark ones.
     camera.set_control(CID_EXPOSURE_AUTO, &1).unwrap();
-    camera.set_control(CID_EXPOSURE_ABSOLUTE, &512).unwrap();
+    camera.set_control(CID_EXPOSURE_ABSOLUTE, &300).unwrap();
 }
