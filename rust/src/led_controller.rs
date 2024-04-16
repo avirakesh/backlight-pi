@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use palette::{rgb::Rgb, IntoColor};
+use palette::{rgb::Rgb, Hsv, IntoColor, MixAssign};
 use queues::IsQueue;
 use rs_ws281x::{ChannelBuilder, Controller, ControllerBuilder};
 
@@ -75,6 +75,18 @@ fn _get_samples_and_draw(
 ) {
     // let mut start = Instant::now();
     // let mut num_frames: u64 = 0;
+    let mut current_colors = SampledColors {
+        top: vec![Hsv::from([0.0, 0.0, 0.0]); led_info.led_idxs.get(&Side::TOP).unwrap().len()],
+        bottom: vec![
+            Hsv::from([0.0, 0.0, 0.0]);
+            led_info.led_idxs.get(&Side::BOTTOM).unwrap().len()
+        ],
+        left: vec![Hsv::from([0.0, 0.0, 0.0]); led_info.led_idxs.get(&Side::LEFT).unwrap().len()],
+        right: vec![Hsv::from([0.0, 0.0, 0.0]); led_info.led_idxs.get(&Side::RIGHT).unwrap().len()],
+    };
+
+    let mut target_colors = current_colors.clone();
+
     while power_on.load(Ordering::Relaxed) {
         // Grab filled sampled points
         let mut filled_opt: Option<Box<SampledColors>> = Option::None;
@@ -88,7 +100,7 @@ fn _get_samples_and_draw(
 
             let mut wait_timeout = sampled_colors
                 .filled_cv
-                .wait_timeout(filled_q, Duration::from_millis(30))
+                .wait_timeout(filled_q, Duration::from_millis(1))
                 .unwrap();
 
             let filled_res = wait_timeout.0.remove();
@@ -99,11 +111,17 @@ fn _get_samples_and_draw(
         }
 
         if filled_opt.is_none() {
-            // power off
-            break;
+            _display_colors(
+                led_controller,
+                led_info,
+                &mut current_colors,
+                &target_colors,
+            );
+            continue;
         }
+
         let filled_colors = filled_opt.unwrap();
-        _display_colors(led_controller, led_info, &filled_colors);
+        target_colors = *filled_colors.clone();
 
         {
             // Return the consumed colors
@@ -111,6 +129,14 @@ fn _get_samples_and_draw(
             empty_q.add(filled_colors).unwrap();
         }
         sampled_colors.empty_cv.notify_all();
+
+        _display_colors(
+            led_controller,
+            led_info,
+            &mut current_colors,
+            &target_colors,
+        );
+
         // num_frames += 1;
         // if num_frames % 10 == 0 {
         //     let curr_time = Instant::now();
@@ -131,56 +157,63 @@ fn _get_samples_and_draw(
 fn _display_colors(
     led_controller: &mut Controller,
     led_info: &LedInfo,
-    colors: &Box<SampledColors>,
+    current_colors: &mut SampledColors,
+    target_colors: &SampledColors,
 ) {
     let leds = led_controller.leds_mut(0);
 
-    for (led_idx, hsv) in led_info
+    for ((led_idx, current_color), target_color) in led_info
         .led_idxs
         .get(&Side::TOP)
         .unwrap()
         .iter()
-        .zip(colors.top.iter())
+        .zip(current_colors.top.iter_mut())
+        .zip(target_colors.top.iter())
     {
-        let temp_hsv = *hsv;
-        let rgb: Rgb = temp_hsv.into_color();
+        current_color.mix_assign(*target_color, 0.5);
+        let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
     }
 
-    for (led_idx, hsv) in led_info
+    for ((led_idx, current_color), target_color) in led_info
         .led_idxs
         .get(&Side::BOTTOM)
         .unwrap()
         .iter()
-        .zip(colors.bottom.iter())
+        .zip(current_colors.top.iter_mut())
+        .zip(target_colors.bottom.iter())
     {
-        let temp_hsv = *hsv;
-        let rgb: Rgb = temp_hsv.into_color();
+        current_color.mix_assign(*target_color, 0.5);
+        let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
     }
-    for (led_idx, hsv) in led_info
+
+    for ((led_idx, current_color), target_color) in led_info
         .led_idxs
         .get(&Side::LEFT)
         .unwrap()
         .iter()
-        .zip(colors.left.iter())
+        .zip(current_colors.top.iter_mut())
+        .zip(target_colors.left.iter())
     {
-        let temp_hsv = *hsv;
-        let rgb: Rgb = temp_hsv.into_color();
+        current_color.mix_assign(*target_color, 0.5);
+        let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
     }
-    for (led_idx, hsv) in led_info
+
+    for ((led_idx, current_color), target_color) in led_info
         .led_idxs
         .get(&Side::RIGHT)
         .unwrap()
         .iter()
-        .zip(colors.right.iter())
+        .zip(current_colors.top.iter_mut())
+        .zip(target_colors.right.iter())
     {
-        let temp_hsv = *hsv;
-        let rgb: Rgb = temp_hsv.into_color();
+        current_color.mix_assign(*target_color, 0.5);
+        let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
     }
