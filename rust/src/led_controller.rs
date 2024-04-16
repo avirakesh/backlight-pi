@@ -87,6 +87,9 @@ fn _get_samples_and_draw(
 
     let mut target_colors = current_colors.clone();
 
+    let mut num_iters: u32 = 0;
+    const MAX_ITERS: u32 = 20;
+
     while power_on.load(Ordering::Relaxed) {
         // Grab filled sampled points
         let mut filled_opt: Option<Box<SampledColors>> = Option::None;
@@ -95,6 +98,11 @@ fn _get_samples_and_draw(
             let filled_res = filled_q.remove();
             if filled_res.is_ok() {
                 filled_opt = Some(filled_res.unwrap());
+                break;
+            }
+
+            if num_iters < MAX_ITERS {
+                // Do not wait if we're still transitioning to the target color
                 break;
             }
 
@@ -111,6 +119,7 @@ fn _get_samples_and_draw(
         }
 
         if filled_opt.is_none() {
+            num_iters += 1;
             _display_colors(
                 led_controller,
                 led_info,
@@ -129,7 +138,7 @@ fn _get_samples_and_draw(
             empty_q.add(filled_colors).unwrap();
         }
         sampled_colors.empty_cv.notify_all();
-
+        num_iters = 0;
         _display_colors(
             led_controller,
             led_info,
@@ -160,6 +169,7 @@ fn _display_colors(
     current_colors: &mut SampledColors,
     target_colors: &SampledColors,
 ) {
+    const INTERPOLATION_CONSTANT: f32 = 0.25;
     let leds = led_controller.leds_mut(0);
 
     for ((led_idx, current_color), target_color) in led_info
@@ -170,7 +180,7 @@ fn _display_colors(
         .zip(current_colors.top.iter_mut())
         .zip(target_colors.top.iter())
     {
-        current_color.mix_assign(*target_color, 0.5);
+        current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
@@ -181,10 +191,10 @@ fn _display_colors(
         .get(&Side::BOTTOM)
         .unwrap()
         .iter()
-        .zip(current_colors.top.iter_mut())
+        .zip(current_colors.bottom.iter_mut())
         .zip(target_colors.bottom.iter())
     {
-        current_color.mix_assign(*target_color, 0.5);
+        current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
@@ -195,10 +205,10 @@ fn _display_colors(
         .get(&Side::LEFT)
         .unwrap()
         .iter()
-        .zip(current_colors.top.iter_mut())
+        .zip(current_colors.left.iter_mut())
         .zip(target_colors.left.iter())
     {
-        current_color.mix_assign(*target_color, 0.5);
+        current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
@@ -209,10 +219,10 @@ fn _display_colors(
         .get(&Side::RIGHT)
         .unwrap()
         .iter()
-        .zip(current_colors.top.iter_mut())
+        .zip(current_colors.right.iter_mut())
         .zip(target_colors.right.iter())
     {
-        current_color.mix_assign(*target_color, 0.5);
+        current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
         leds[*led_idx] = [rgb_u8.blue, rgb_u8.green, rgb_u8.red, 0];
