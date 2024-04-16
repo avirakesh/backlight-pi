@@ -9,7 +9,11 @@ use std::{
 
 use palette::{Hsv, IntoColor, Srgb};
 use queues::{IsQueue, Queue};
-use rscam::{Camera, Config, Frame, FIELD_NONE};
+use rscam::{
+    Camera, Config, Frame, CID_AUTO_WHITE_BALANCE, CID_BRIGHTNESS, CID_CONTRAST,
+    CID_EXPOSURE_ABSOLUTE, CID_EXPOSURE_AUTO, CID_GAIN, CID_GAMMA, CID_HUE, CID_SATURATION,
+    CID_SHARPNESS, CID_WHITE_BALANCE_TEMPERATURE, FIELD_NONE,
+};
 use turbojpeg::{Decompressor, Image, PixelFormat};
 
 use crate::{
@@ -310,6 +314,8 @@ fn _pump_v4l2_frames_from_camera(
     let mut camera = Camera::new(&device.device_path)
         .expect(format!("Could not open camera {}", device.device_path).as_str());
 
+    _set_v4l2_camera_controls(&mut camera);
+
     let config = Config {
         interval: (1, 30), // 30fps hardcoded. This may or may not be reasonable for the camera
         resolution: (device.resolution.0 as u32, device.resolution.1 as u32),
@@ -369,4 +375,28 @@ fn _pump_v4l2_frames_from_camera(
             // silently drop the frame (by going out of scope)
         }
     }
+}
+
+fn _set_v4l2_camera_controls(camera: &mut Camera) {
+    camera.set_control(CID_BRIGHTNESS, &64).unwrap();
+    camera.set_control(CID_CONTRAST, &60).unwrap();
+    camera.set_control(CID_SATURATION, &150).unwrap();
+    camera.set_control(CID_HUE, &0).unwrap();
+    camera.set_control(CID_GAMMA, &100).unwrap();
+    camera.set_control(CID_GAIN, &32).unwrap();
+    camera.set_control(CID_SHARPNESS, &10).unwrap();
+
+    // Disable autowhite balance and set whitepoint manually
+    // This is needed to prevent the camera from auto whilebalancing,
+    // potentially messing the colors.
+    camera.set_control(CID_AUTO_WHITE_BALANCE, &0).unwrap();
+    camera
+        .set_control(CID_WHITE_BALANCE_TEMPERATURE, &4600)
+        .unwrap();
+
+    // Disable auto exposure and set an exposure value
+    // This is needed to prevent the camera from auto blowing out dark scenes
+    // or dimming dark ones.
+    camera.set_control(CID_EXPOSURE_AUTO, &1).unwrap();
+    camera.set_control(CID_EXPOSURE_ABSOLUTE, &512).unwrap();
 }
