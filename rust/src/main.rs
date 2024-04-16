@@ -15,30 +15,26 @@ use crate::{
 
 fn main() {
     let device_preference = DevicePreference::read();
-    // println!("{:?}", device_preference);
-    // println!("");
     let sample_windows = SampleWindows::read(&device_preference.resolution);
-    // println!("{:?}", sample_points);
-    // println!("");
     let led_info = LedInfo::read();
     let power_pin = led_info.power_pin as u8;
-    // println!("{:?}", led_info);
 
-    // run_camera_encode_loop(device_preference, sample_points);
-    // test_leds(led_info);
-
+    // AtomicBool to serve as a sentinel for the power value. Various threads
+    // will only run if this value is set to true.
     let power_on = Arc::new(AtomicBool::new(true));
-    // let test = Mutex::new(Arc::new(false));
 
+    // Start the camera controller threads.
     let camera_controller =
         start_camera_controller(power_on.clone(), device_preference, sample_windows);
 
+    // Start the LED controller threads.
     let led_thread_handle = start_led_controller(
         power_on.clone(),
         camera_controller.sample_points_queue.clone(),
         led_info,
     );
 
+    // Infinitely poll the GPIO pin for the power value.
     let thread_handles = vec![camera_controller.thread_handle, led_thread_handle];
     monitor_power(power_pin, power_on, thread_handles); // never returns
 }
