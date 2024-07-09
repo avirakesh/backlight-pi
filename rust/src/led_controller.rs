@@ -99,10 +99,10 @@ fn _get_samples_and_draw(
     let mut target_colors = current_colors.clone();
 
     // Number of iterations to try and get to target colors
-    let mut num_iters: u32 = 0;
-    const MAX_ITERS: u32 = 30;
+    let mut iter_num: u32 = 1;
+    const MAX_ITERS: u32 = 31;
 
-    // let mut start = Instant::now();
+    // let mut start = std::time::Instant::now();
     // let mut num_frames: u64 = 0;
     while power_on.load(Ordering::Relaxed) {
         // Grab filled sampled points
@@ -116,7 +116,7 @@ fn _get_samples_and_draw(
             }
 
             // Do not wait if we might still be transitioning to the target color
-            if num_iters < MAX_ITERS {
+            if iter_num < MAX_ITERS {
                 break;
             }
 
@@ -136,12 +136,14 @@ fn _get_samples_and_draw(
         // Either way render the target colors.
         // If power is off, the loop will break after the render.
         if filled_opt.is_none() {
-            num_iters += 1;
+            iter_num += 1;
             _display_colors(
                 led_controller,
                 led_info,
                 &mut current_colors,
                 &target_colors,
+                iter_num,
+                MAX_ITERS
             );
             continue;
         }
@@ -158,17 +160,19 @@ fn _get_samples_and_draw(
         sampled_colors.empty_cv.notify_all();
 
         // New target_colors found. Reset num_iters, and display the colors
-        num_iters = 0;
+        iter_num = 1;
         _display_colors(
             led_controller,
             led_info,
             &mut current_colors,
             &target_colors,
+            iter_num,
+            MAX_ITERS
         );
 
         // num_frames += 1;
         // if num_frames % 10 == 0 {
-        //     let curr_time = Instant::now();
+        //     let curr_time = std::time::Instant::now();
         //     println!(
         //         "# Frames: {}; Time: {}; Framerate: {}",
         //         num_frames,
@@ -177,7 +181,7 @@ fn _get_samples_and_draw(
         //     );
         //     if num_frames >= 100 {
         //         num_frames = 0;
-        //         start = Instant::now();
+        //         start = std::time::Instant::now();
         //     }
         // }
     }
@@ -196,8 +200,28 @@ fn _display_colors(
     led_info: &LedInfo,
     current_colors: &mut SampledColors,
     target_colors: &SampledColors,
+    iter_num: u32,
+    target_iter_num: u32
 ) {
-    const INTERPOLATION_CONSTANT: f32 = 0.25;
+    let target_iter_num: f32 = target_iter_num as f32;
+    let iter_num: f32 = iter_num as f32;
+    // We want to linearly transition in TRANSITION_ITER_TARGET iterations
+    if iter_num <= 0.0 || iter_num as f32 > target_iter_num {
+        return;
+    }
+
+    // Absolute normalized point of current_color. This is normalized between
+    // target_colors and some theoretical starting color (which would have been)
+    // the value of current_colors at iter_num = 1
+    let prev_norm_step: f32 = (iter_num - 1.0) / target_iter_num;
+    // Absolute normalized point where the next color should be. This is
+    // normalized between some unknown starting color and the target color.
+    let curr_norm_step: f32 = iter_num / target_iter_num;
+
+    // Factor by which current color in this step. This is simply the curr_norm_step
+    // normalized between prev_norm_step and 1.
+    let interpolation_factor = (curr_norm_step - prev_norm_step) / (1.0 - prev_norm_step);
+
     let leds = led_controller.leds_mut(0);
 
     for ((led_idx, current_color), target_color) in led_info
@@ -209,7 +233,7 @@ fn _display_colors(
         .zip(target_colors.top.iter())
     {
         // Calculate an interpolated value in HSV space.
-        current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
+        current_color.mix_assign(*target_color, interpolation_factor);
         // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
@@ -226,7 +250,7 @@ fn _display_colors(
         .zip(target_colors.bottom.iter())
     {
         // Calculate an interpolated value in HSV space.
-        current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
+        current_color.mix_assign(*target_color, interpolation_factor);
         // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
@@ -243,7 +267,7 @@ fn _display_colors(
         .zip(target_colors.left.iter())
     {
         // Calculate an interpolated value in HSV space.
-        current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
+        current_color.mix_assign(*target_color, interpolation_factor);
         // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
@@ -260,7 +284,7 @@ fn _display_colors(
         .zip(target_colors.right.iter())
     {
         // Calculate an interpolated value in HSV space.
-        current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
+        current_color.mix_assign(*target_color, interpolation_factor);
         // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();
         let rgb_u8 = rgb.into_format::<u8>();
