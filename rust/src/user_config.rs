@@ -7,7 +7,7 @@ use std::{
 
 use json::JsonValue;
 
-pub(crate) const KERNEL_SIZE: usize = 5;
+pub(crate) const KERNEL_SIZE: usize = 25;
 
 const CONFIG_PATH: &str = "./config";
 const DEVICE_PREFS_FILE: &str = "v4l2_device.txt";
