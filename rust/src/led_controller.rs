@@ -184,7 +184,7 @@ fn _get_samples_and_draw(
 }
 
 /**
- * Set LED Colors. It iterpolates colors between current_colors and
+ * Set LED Colors. It interpolates colors between current_colors and
  * target_colors for each LED. The new colors of the LED are set in
  * current_colors.
  *
@@ -208,7 +208,7 @@ fn _display_colors(
         .zip(current_colors.top.iter_mut())
         .zip(target_colors.top.iter())
     {
-        // Calulate an interpolated value in HSV space.
+        // Calculate an interpolated value in HSV space.
         current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
         // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();
@@ -225,7 +225,7 @@ fn _display_colors(
         .zip(current_colors.bottom.iter_mut())
         .zip(target_colors.bottom.iter())
     {
-        // Calulate an interpolated value in HSV space.
+        // Calculate an interpolated value in HSV space.
         current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
         // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();
@@ -242,7 +242,7 @@ fn _display_colors(
         .zip(current_colors.left.iter_mut())
         .zip(target_colors.left.iter())
     {
-        // Calulate an interpolated value in HSV space.
+        // Calculate an interpolated value in HSV space.
         current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
         // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();
@@ -259,7 +259,7 @@ fn _display_colors(
         .zip(current_colors.right.iter_mut())
         .zip(target_colors.right.iter())
     {
-        // Calulate an interpolated value in HSV space.
+        // Calculate an interpolated value in HSV space.
         current_color.mix_assign(*target_color, INTERPOLATION_CONSTANT);
         // Slightly weird transformation of interpolated color to RGB colorspace
         let rgb: Rgb = (*current_color).into_color();

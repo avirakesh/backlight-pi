@@ -358,7 +358,7 @@ fn _coords_to_idx((x, y): &(usize, usize), stride: usize) -> usize {
     let col_idx = x * PixelFormat::RGB.size();
     row_idx + col_idx
 }
-//////////////////////////// Image Sampler Thread Start ////////////////////////////
+//////////////////////////// Image Sampler Thread End ////////////////////////////
 
 //////////////////////////// V4L2 Thread Start ////////////////////////////
 /**
@@ -448,8 +448,8 @@ fn _set_v4l2_camera_controls(camera: &mut Camera) {
     camera.set_control(CID_GAIN, &32).unwrap();
     camera.set_control(CID_SHARPNESS, &10).unwrap();
 
-    // Disable autowhite balance and set whitepoint manually
-    // This is needed to prevent the camera from auto whilebalancing,
+    // Disable auto whitebalance and set whitepoint manually
+    // This is needed to prevent the camera from auto whitebalancing,
     // potentially messing the colors.
     camera.set_control(CID_AUTO_WHITE_BALANCE, &0).unwrap();
     camera
